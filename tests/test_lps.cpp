@@ -384,7 +384,7 @@ void test_lps_file_io() {
 	assert(lps_obj.level == lps_obj_from_file.level && "Level should match after reading from file");
 	assert(lps_obj.size == lps_obj_from_file.size && "Core size should match after reading from file");
 	for (int i = 0; i < lps_obj.size; ++i) {
-		assert( core_eq(&(lps_obj.cores[i]), &(lps_obj_from_file.cores[i])) && "Cores should match after reading from file");
+		assert(core_eq(&(lps_obj.cores[i]), &(lps_obj_from_file.cores[i])) && "Cores should match after reading from file");
 	}
 
 	// clean up the test file
@@ -506,7 +506,7 @@ void test_lps_deepen() {
 
 	assert(lps_obj.size == static_cast<int>(level3_cores.size()) && "Core size at level 3 should match");
 	for (int i = 0; i < lps_obj.size; i++) {
-		assert( core_eq(&(lps_obj.cores[i]), level3_cores[i]) && "Cores at level 3 should match");
+		assert(core_eq(&(lps_obj.cores[i]), level3_cores[i]) && "Cores at level 3 should match");
 	}
 
 	// attempt to deepen to a lower level (should not do anything)

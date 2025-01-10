@@ -48,10 +48,10 @@ void findMinimizers(int &gapSize, int &intraGapSize, std::string &sequence, Vec 
 
     for (Vec::iterator it = minimizers.begin()+1; it < minimizers.end(); it++) {
         distances[ it->position - (it - 1)->position ]++;
-        if ( (it-1)->position + kmerSize < it->position) {
+        if ((it-1)->position + kmerSize < it->position) {
             intraGapSize += (it->position - ((it-1)->position + kmerSize));
         }
-        assert( it->position - (it-1)->position <= windowSize ); // two subsequent minimizers cannot have distance more than window size
+        assert(it->position - (it-1)->position <= windowSize); // two subsequent minimizers cannot have distance more than window size
     }
 
     std::cout << "Length of the processed sequence: " << format_int(sequence.size()) << 
@@ -98,19 +98,19 @@ int main(int argc, char** argv) {
     genome.open(argv[1], std::ios::in);
     
     // Read the file line by line
-    if ( genome.is_open() ) {  
+    if (genome.is_open()) {  
         
         std::cout << "Program begins" << std::endl;
         std::cout << "K-mer size: " << kmer_size << ", Window size: " << window_size << std::endl;
 
-        while ( getline(genome, line) ) {
+        while (getline(genome, line)) {
 
             if (line[0] == '>') {
 
                 // Process previous chromosome before moving into new one
                 if (gen.size() != 0) {
                     Vec sequence_minimizers;
-                    sequence_minimizers.reserve( 3 * gen.size() / window_size );
+                    sequence_minimizers.reserve(3 * gen.size() / window_size);
                     findMinimizers(gapSize, intraGapSize, gen, sequence_minimizers, kmer_size, window_size, map, rc_map, distances);
                     minimizers.push_back(sequence_minimizers);
                 }
@@ -130,7 +130,7 @@ int main(int argc, char** argv) {
         // Process last chromosome before calculating stats
         if (gen.size() != 0) {
             Vec sequence_minimizers;
-            sequence_minimizers.reserve( 3 * gen.size() / window_size );
+            sequence_minimizers.reserve(3 * gen.size() / window_size);
             findMinimizers(gapSize, intraGapSize, gen, sequence_minimizers, kmer_size, window_size, map, rc_map, distances);
             minimizers.push_back(sequence_minimizers);
         }
@@ -159,8 +159,8 @@ int main(int argc, char** argv) {
     std::sort(flattened_minimizers.begin(), flattened_minimizers.end());
 
     numOfDistintMinimizers = 1;
-    for ( std::vector<kmer_type>::iterator it = flattened_minimizers.begin() + 1; it < flattened_minimizers.end(); it++ ) {
-        if ( *(it-1) != *(it) ) {
+    for (std::vector<kmer_type>::iterator it = flattened_minimizers.begin() + 1; it < flattened_minimizers.end(); it++) {
+        if (*(it-1) != *(it)) {
             numOfDistintMinimizers++;
         }
     }

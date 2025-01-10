@@ -41,7 +41,7 @@
 void findSyncmers(int &gapSize, int &intraGapSize, std::string &sequence, Vec &syncmers, int kmerSize, int smerSize, int smerIndex, int* map, int* distances) {
     uint64_t current_index = 0;
 
-    for ( Iter it = sequence.begin(); it <= sequence.end() - kmerSize; ++it ) {
+    for (Iter it = sequence.begin(); it <= sequence.end() - kmerSize; ++it) {
         process(it, it + kmerSize, current_index, kmerSize, smerSize, smerIndex, syncmers, map);
         current_index++;
     }
@@ -49,9 +49,9 @@ void findSyncmers(int &gapSize, int &intraGapSize, std::string &sequence, Vec &s
     gapSize += syncmers.begin()->position;
     gapSize += sequence.size() - ((syncmers.end() - 1)->position + kmerSize);
 
-    for ( Vec::iterator it = syncmers.begin()+1; it < syncmers.end(); it++ ) {
+    for (Vec::iterator it = syncmers.begin()+1; it < syncmers.end(); it++) {
         distances[ it->position - (it - 1)->position ]++;
-        if ( (it-1)->position + kmerSize < it->position) {
+        if ((it-1)->position + kmerSize < it->position) {
             intraGapSize += (it->position - ((it-1)->position + kmerSize));
         }
     }
@@ -100,19 +100,19 @@ int main(int argc, char** argv) {
     genome.open(argv[1], std::ios::in);
 
     // Read the file line by line
-    if ( genome.is_open() ) {  
+    if (genome.is_open()) {  
         
         std::cout << "Program begins" << std::endl;
         std::cout << "K-mer size: " << kmer_size << " S-mer size: " << smer_size << " S-mer index: " << smer_index << std::endl;
 
-        while ( getline(genome, line) ) {
+        while (getline(genome, line)) {
 
             if (line[0] == '>') {
 
                 // Process previous chromosome before moving into new one
                 if (gen.size() != 0) {
                     Vec sequence_syncmers;
-                    sequence_syncmers.reserve( gen.size() );
+                    sequence_syncmers.reserve(gen.size());
                     findSyncmers(gapSize, intraGapSize, gen, sequence_syncmers, kmer_size, smer_size, smer_index, map, distances);
                     syncmers.push_back(sequence_syncmers);
                 }
@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
         // Process last chromosome before calculating stats
         if (gen.size() != 0) {
             Vec sequence_syncmers;
-            sequence_syncmers.reserve( gen.size() );
+            sequence_syncmers.reserve(gen.size());
             findSyncmers(gapSize, intraGapSize, gen, sequence_syncmers, kmer_size, smer_size, smer_index, map, distances);
             syncmers.push_back(sequence_syncmers);
         }
@@ -162,8 +162,8 @@ int main(int argc, char** argv) {
     std::sort(flattened_syncmers.begin(), flattened_syncmers.end());
 
     numOfDistintSyncmers = 1;
-    for ( std::vector<kmer_type>::iterator it = flattened_syncmers.begin() + 1; it < flattened_syncmers.end(); it++ ) {
-        if ( *(it-1) != *(it) ) {
+    for (std::vector<kmer_type>::iterator it = flattened_syncmers.begin() + 1; it < flattened_syncmers.end(); it++) {
+        if (*(it-1) != *(it)) {
             numOfDistintSyncmers++;
         }
     }

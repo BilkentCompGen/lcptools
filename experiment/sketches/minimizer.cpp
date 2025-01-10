@@ -41,7 +41,7 @@ struct minimizer {
  */
 inline kmer_type encode(int* map, Iter begin, Iter end) {
     kmer_type res = 0;
-    for ( Iter it = begin; it < end; it++ ) {
+    for (Iter it = begin; it < end; it++) {
         res *= 4;
         res |= map[static_cast<size_t>(*it)];
     }
@@ -63,7 +63,7 @@ inline kmer_type encode(int* map, Iter begin, Iter end) {
  */
 inline kmer_type rc_encode(int* rc_map, Iter begin, Iter end) {
     kmer_type res = 0;
-    for ( Iter it = end-1; begin <= it; it-- ) {
+    for (Iter it = end-1; begin <= it; it--) {
         res *= 4;
         res |= rc_map[static_cast<size_t>(*it)];
     }
@@ -81,7 +81,7 @@ inline kmer_type rc_encode(int* rc_map, Iter begin, Iter end) {
  *            in the ASCII table.
  */
 void init_map(int map[128]) {
-    for ( int i = 0; i < 128; i++ )
+    for (int i = 0; i < 128; i++)
         map[i] = 0;
 
     map['A'] = 0; map['a'] = 0;
@@ -101,7 +101,7 @@ void init_map(int map[128]) {
  *            in the ASCII table.
  */
 void init_rc_map(int map[128]) {
-    for ( int i = 0; i < 128; i++ )
+    for (int i = 0; i < 128; i++)
         map[i] = 0;
 
     map['A'] = 3; map['a'] = 3;
@@ -134,12 +134,12 @@ void process(Iter begin, Iter end, uint64_t index, int kmerSize, Vec &minimizers
     while (cur_kmer < end) {
         int temp_index = 0;
 
-        while ( temp_index < kmerSize && 
-                ((*(cur_kmer+temp_index))|0x20) == ((*(min_kmer+temp_index))|0x20) )
+        while (temp_index < kmerSize && 
+                ((*(cur_kmer+temp_index))|0x20) == ((*(min_kmer+temp_index))|0x20))
             temp_index++;
 
         if (temp_index != kmerSize && 
-            ((*(cur_kmer+temp_index))|0x20) < ((*(min_kmer+temp_index))|0x20) ) {
+            ((*(cur_kmer+temp_index))|0x20) < ((*(min_kmer+temp_index))|0x20)) {
             min_kmer = cur_kmer;
             min_kmer_index = cur_kmer_index;
         }
@@ -149,7 +149,7 @@ void process(Iter begin, Iter end, uint64_t index, int kmerSize, Vec &minimizers
     }
     
     if (minimizers.empty() || minimizers.back().position != min_kmer_index) {
-        minimizers.emplace_back( encode( map, min_kmer, min_kmer+kmerSize ), min_kmer_index );
+        minimizers.emplace_back(encode(map, min_kmer, min_kmer+kmerSize), min_kmer_index);
     }
 };
 
@@ -193,7 +193,7 @@ void process2(Iter begin, Iter end, uint64_t index, int kmerSize, Vec &minimizer
     }
     
     if (minimizers.empty() || minimizers.back().position != min_kmer_index) {
-        minimizers.emplace_back( min_kmer, min_kmer_index );
+        minimizers.emplace_back(min_kmer, min_kmer_index);
     }
 };
 
@@ -221,12 +221,12 @@ uint64_t process3(Iter begin, Iter end, int64_t previous_index, uint64_t current
     while (cur_kmer < end) {
         int temp_index = 0;
 
-        while ( temp_index < kmerSize && 
-                ((*(cur_kmer+temp_index))|0x20) == ((*(min_kmer+temp_index))|0x20) )
+        while (temp_index < kmerSize && 
+                ((*(cur_kmer+temp_index))|0x20) == ((*(min_kmer+temp_index))|0x20))
             temp_index++;
 
         if (temp_index != kmerSize && 
-            ((*(cur_kmer+temp_index))|0x20) < ((*(min_kmer+temp_index))|0x20) ) {
+            ((*(cur_kmer+temp_index))|0x20) < ((*(min_kmer+temp_index))|0x20)) {
             min_kmer = cur_kmer;
             min_kmer_index = cur_kmer_index;
         }
@@ -235,8 +235,8 @@ uint64_t process3(Iter begin, Iter end, int64_t previous_index, uint64_t current
         cur_kmer_index++;
     }
 
-    if (previous_index == -1 || (uint64_t)previous_index != min_kmer_index ) {
-        kmer_type kmer = encode( map, min_kmer, min_kmer+kmerSize );
+    if (previous_index == -1 || (uint64_t)previous_index != min_kmer_index) {
+        kmer_type kmer = encode(map, min_kmer, min_kmer+kmerSize);
         minimizerMap[kmer].push_back(min_kmer_index);
     }
 
@@ -268,8 +268,8 @@ uint64_t process4(Iter begin, Iter end, int64_t previous_index, uint64_t current
         cur_kmer_index++;
     }
     
-    if (previous_index == -1 || (uint64_t)previous_index != min_kmer_index ) {
-        kmer_type kmer = encode( map, begin+(min_kmer_index-current_index), begin+(min_kmer_index-current_index+kmerSize) );
+    if (previous_index == -1 || (uint64_t)previous_index != min_kmer_index) {
+        kmer_type kmer = encode(map, begin+(min_kmer_index-current_index), begin+(min_kmer_index-current_index+kmerSize));
         minimizerMap[kmer].push_back(min_kmer_index);
     }
 

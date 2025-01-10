@@ -52,7 +52,7 @@ void calculate_metrics(int kmer_size_values[KMER_VALUES_SIZE], stats_type result
 void findSyncmers(std::string &sequence, int kmerSize, int smerSize, int smerIndex, int* map, std::map<kmer_type, std::vector<uint64_t>>& syncmerMap) {
     uint64_t current_index = 0;
 
-    for ( Iter it = sequence.begin(); it <= sequence.end() - kmerSize; ++it ) {
+    for (Iter it = sequence.begin(); it <= sequence.end() - kmerSize; ++it) {
         process3(it, it + kmerSize, current_index, kmerSize, smerSize, smerIndex, map, syncmerMap);
         current_index++;
     }
@@ -125,7 +125,7 @@ void t_process(int thread_index, const char *fa, const char *mf, const char *ff,
 
     while (true) {
         // read fastq read. if there is a read in there, then there must be simulated reads in maf
-        if ( ! getline(fastqFile, fq_line) ) { // reads first line of read: @ID
+        if (! getline(fastqFile, fq_line)) { // reads first line of read: @ID
             break;
         }
 
@@ -150,7 +150,7 @@ void t_process(int thread_index, const char *fa, const char *mf, const char *ff,
 
             getline(mafFile, maf_line); // skip empty line (last line)
 
-            if ( maf_id == fq_id ) { // found id match
+            if (maf_id == fq_id) { // found id match
                 break;
             }
             

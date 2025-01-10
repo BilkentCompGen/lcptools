@@ -83,11 +83,11 @@ std::string format_double(double value, size_t precision = 2) {
 double mean(int (&numbers)[DISTANCE_LENGTH], std::vector<int> numbersXL = {}) {
     double sum = 0;
     double count = 0;
-    for ( size_t i = 0; i < DISTANCE_LENGTH; i++ ) {
-        sum += ( i * numbers[i] );
+    for (size_t i = 0; i < DISTANCE_LENGTH; i++) {
+        sum += (i * numbers[i]);
         count += numbers[i];
     }
-    for ( size_t i = 0; i < numbersXL.size(); i++ ) {
+    for (size_t i = 0; i < numbersXL.size(); i++) {
         sum += numbersXL[i];
     }
     count += numbersXL.size();
@@ -108,16 +108,16 @@ double mean(int (&numbers)[DISTANCE_LENGTH], std::vector<int> numbersXL = {}) {
 double stdev(int (&numbers)[DISTANCE_LENGTH], std::vector<int> numbersXL = {}) {
     double mean_value = mean(numbers, numbersXL);
     double count = 0;
-    for ( size_t i = 0; i < DISTANCE_LENGTH; i++ ) {
+    for (size_t i = 0; i < DISTANCE_LENGTH; i++) {
         count += numbers[i];
     }
     count += numbersXL.size();
     double variance = 0;
-    for ( size_t i = 0; i < DISTANCE_LENGTH; i++ ) {
-        variance += ( ( mean_value - i ) * ( mean_value - i ) * numbers[i] );
+    for (size_t i = 0; i < DISTANCE_LENGTH; i++) {
+        variance += ((mean_value - i) * (mean_value - i) * numbers[i]);
     }
-    for ( size_t i = 0; i < numbersXL.size(); i++ ) {
-        variance += ( ( mean_value - numbersXL[i] ) * ( mean_value - numbersXL[i] ) );
+    for (size_t i = 0; i < numbersXL.size(); i++) {
+        variance += ((mean_value - numbersXL[i]) * (mean_value - numbersXL[i]));
     }
     return sqrt(variance / count);
 };

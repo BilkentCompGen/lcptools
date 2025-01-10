@@ -101,7 +101,7 @@ void t_process(int thread_index, const char *mf, const char *ff, int lcpLevel, s
 
     while (true) {
         // read fastq read. if there is a read in there, then there must be simulated reads in maf
-        if ( ! getline(fastqFile, fq_line) ) { // reads first line of read: @ID
+        if (! getline(fastqFile, fq_line)) { // reads first line of read: @ID
             break;
         }
 
@@ -126,7 +126,7 @@ void t_process(int thread_index, const char *mf, const char *ff, int lcpLevel, s
 
             getline(mafFile, maf_line); // skip empty line (last line)
 
-            if ( maf_id == fq_id ) { // found id match
+            if (maf_id == fq_id) { // found id match
                 break;
             }
             

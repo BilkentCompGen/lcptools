@@ -222,7 +222,7 @@ void init_core3(struct core *cr, struct core *begin, uint64_t distance) {
     data[1] = (begin+distance-2)->label;
     data[2] = (begin+distance-1)->label;
     data[3] = distance-2;
-    cr->label = MurmurHash3_32( (void*)data, 4 * sizeof(ulabel), 42);
+    cr->label = MurmurHash3_32((void*)data, 4 * sizeof(ulabel), 42);
 }
 
 void init_core4(struct core *cr, ubit_size bit_size, ublock *bit_rep, ulabel label, uint64_t start, uint64_t end) {

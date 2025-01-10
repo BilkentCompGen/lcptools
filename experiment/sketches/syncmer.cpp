@@ -41,7 +41,7 @@ struct syncmer {
  */
 kmer_type encode(int* map, Iter begin, Iter end) {
     kmer_type res = 0;
-    for ( Iter it = begin; it < end; it++ ) {
+    for (Iter it = begin; it < end; it++) {
         res *= 4;
         res |= map[static_cast<size_t>(*it)];
     }
@@ -59,7 +59,7 @@ kmer_type encode(int* map, Iter begin, Iter end) {
  *            in the ASCII table.
  */
 void init_map(int map[128]) {
-    for ( int i = 0; i < 128; i++ )
+    for (int i = 0; i < 128; i++)
         map[i] = 0;
 
     map['A'] = 0; map['a'] = 0;
@@ -109,7 +109,7 @@ void process(Iter begin, Iter end, uint64_t current_index, int kmerSize, int sme
     }
     
     if (min_smer_index == smerIndex) {
-        syncmers.emplace_back( encode( map, begin, begin+kmerSize ), current_index );
+        syncmers.emplace_back(encode(map, begin, begin+kmerSize), current_index);
     }
 };
 

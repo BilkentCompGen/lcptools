@@ -99,56 +99,68 @@ void init_lps4(struct lps *lps_ptr, const char *str, int len, int lcp_level, int
 
     lps_ptr->level = 1;
     lps_ptr->size = 0; 
-    int estimated_size = (int)(len / pow( (double)CONSTANT_FACTOR, lcp_level));
+    int estimated_size = (int)(len / pow((double)CONSTANT_FACTOR, lcp_level));
     lps_ptr->cores = (struct core *)malloc(estimated_size*sizeof(struct core));
 
-    int index = 0, core_index = 0, proceed = 1;
+    int str_index = 0, core_index = 0;
 
     {
-        int str_len = minimum(chunk_size, len-index);
+        int str_len = minimum(chunk_size, len);
         struct lps temp_lps;
-        init_lps_offset(&temp_lps, str+index, str_len, index);
+        init_lps_offset(&temp_lps, str, str_len, 0);
         lps_deepen(&temp_lps, lcp_level);
-        
-        if (temp_lps.size>1) {
-            memcpy(lps_ptr->cores+core_index, temp_lps.cores, temp_lps.size*sizeof(struct core));
-            core_index += temp_lps.size;
-            lps_ptr->size += temp_lps.size;
-            index = lps_ptr->cores[core_index-3].start+1;
+
+        if (temp_lps.size) {
+            memcpy(lps_ptr->cores, temp_lps.cores, (temp_lps.size)*sizeof(struct core));
+            core_index = (temp_lps.size);
+            lps_ptr->size = (temp_lps.size);
+            if (temp_lps.size>1)
+                str_index = lps_ptr->cores[core_index-2].start;
+            else 
+                str_index = lps_ptr->cores[core_index-1].start;
         }
         free(temp_lps.cores);
-        proceed = (str_len == chunk_size);
     }
 
-    while (index < len && proceed) {
-        int str_len = minimum(chunk_size, len-index);
+    while (str_index < len) {
+        int str_len = minimum(chunk_size, len-str_index);
         struct lps temp_lps;
-        init_lps_offset(&temp_lps, str+index, str_len, index);
+        init_lps_offset(&temp_lps, str+str_index, str_len, str_index);
         lps_deepen(&temp_lps, lcp_level);
-        
-        if (temp_lps.size>1) {
-            int overlap = 0;
-            for (; overlap<temp_lps.size; overlap++) {
-                if (temp_lps.cores[overlap].start == lps_ptr->cores[core_index-1].start) {
-                    for(int i=0; i<=overlap; i++) {
-                        free_core(&(temp_lps.cores[i]));
-                    }
-                    memcpy(lps_ptr->cores+core_index, temp_lps.cores+overlap+1, (temp_lps.size-overlap-1)*sizeof(struct core));
-                    core_index += (temp_lps.size-overlap-1);
-                    lps_ptr->size += (temp_lps.size-overlap-1);
-                    index = lps_ptr->cores[core_index-3].start+1;
+
+        if (1<temp_lps.size) {
+            int overlap = 2;
+            while (0<overlap) {
+                if (lps_ptr->cores[core_index-overlap].start == temp_lps.cores[0].start)
                     break;
-                }
+                overlap--;
             }
-            if (overlap==temp_lps.size) {
-                memcpy(lps_ptr->cores+core_index, temp_lps.cores, temp_lps.size*sizeof(struct core));
-                core_index += temp_lps.size;
-                lps_ptr->size += temp_lps.size;
-                index = lps_ptr->cores[core_index-3].start+1;
+            for(int i=0; i<overlap; i++) {
+                free_core(&(temp_lps.cores[i]));
+            }
+            memcpy(lps_ptr->cores+core_index, temp_lps.cores+overlap, (temp_lps.size-overlap)*sizeof(struct core));
+            core_index += (temp_lps.size-overlap);
+            lps_ptr->size += (temp_lps.size-overlap);
+
+            if ((uint64_t)str_index < lps_ptr->cores[core_index-2].start) {
+                str_index = lps_ptr->cores[core_index-2].start;
+                free(temp_lps.cores);
+                continue;
+            } 
+        }
+        
+        // find next start point
+        for(int i=str_index+str_len-1; str_index <= i; i--) {
+            if (alphabet[(unsigned char)*(str+i)] == -1) {
+                str_index = i+1;
+                break;
             }
         }
+        if (alphabet[(unsigned char)*(str+str_index)] != -1) { // all of the characters are valid, so not valid cores found
+            str_index += str_len;
+        }
+        
         free(temp_lps.cores);
-        proceed = (str_len == chunk_size);
     }
 
     if (lps_ptr->size)
@@ -228,7 +240,7 @@ int parse1(const char *begin, const char *end, struct core *cores, uint64_t offs
         }
 
         if (alphabet[(unsigned char)*it1] > alphabet[(unsigned char)*(it1+1)] &&
-            alphabet[(unsigned char)*(it1+1)] < alphabet[(unsigned char)*(it1+2)] ) {
+            alphabet[(unsigned char)*(it1+1)] < alphabet[(unsigned char)*(it1+2)]) {
 
             // check if there is any SSEQ cores left behind
             if (it2 < it1) {
@@ -253,7 +265,7 @@ int parse1(const char *begin, const char *end, struct core *cores, uint64_t offs
             alphabet[(unsigned char)*it1] < alphabet[(unsigned char)*(it1+1)] &&
             alphabet[(unsigned char)*(it1+1)] > alphabet[(unsigned char)*(it1+2)] &&
             alphabet[(unsigned char)*(it1-1)] <= alphabet[(unsigned char)*(it1)] &&
-            alphabet[(unsigned char)*(it1+2)] >= alphabet[(unsigned char)*(it1+3)] ) {
+            alphabet[(unsigned char)*(it1+2)] >= alphabet[(unsigned char)*(it1+3)]) {
 
             // check if there is any SSEQ cores left behind
             if (it2 < it1) {
@@ -314,7 +326,7 @@ int parse2(const char *begin, const char *end, struct core *cores, uint64_t offs
         }
 
         if (rc_alphabet[(unsigned char)*it1] > rc_alphabet[(unsigned char)*(it1+1)] &&
-            rc_alphabet[(unsigned char)*(it1+1)] < rc_alphabet[(unsigned char)*(it1+2)] ) {
+            rc_alphabet[(unsigned char)*(it1+1)] < rc_alphabet[(unsigned char)*(it1+2)]) {
 
             // check if there is any SSEQ cores left behind
             if (it2 < it1) {
@@ -339,7 +351,7 @@ int parse2(const char *begin, const char *end, struct core *cores, uint64_t offs
             rc_alphabet[(unsigned char)*it1] < rc_alphabet[(unsigned char)*(it1+1)] &&
             rc_alphabet[(unsigned char)*(it1+1)] > rc_alphabet[(unsigned char)*(it1+2)] &&
             rc_alphabet[(unsigned char)*(it1-1)] <= rc_alphabet[(unsigned char)*(it1)] &&
-            rc_alphabet[(unsigned char)*(it1+2)] >= rc_alphabet[(unsigned char)*(it1+3)] ) {
+            rc_alphabet[(unsigned char)*(it1+2)] >= rc_alphabet[(unsigned char)*(it1+3)]) {
 
             // check if there is any SSEQ cores left behind
             if (it2 < it1) {
