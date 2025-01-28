@@ -50,7 +50,6 @@ int isNumber(const char *str) {
 void done(FILE *out) {
     char isDone = 0;
     fwrite(&isDone, 1, 1, out);
-    fclose(out);
 }
 
 int process_fasta(const char *infilename, const char *outfilename, int lcp_level, long unsigned int sequence_size) {
