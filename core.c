@@ -90,131 +90,43 @@ uint32_t MurmurHash3_32(const void *key, int len, uint32_t seed) {
 }
 
 void init_core1(struct core *cr, const char *begin, uint64_t distance, uint64_t start_index, uint64_t end_index) {
-
     cr->start = start_index;
     cr->end = end_index;
-    cr->bit_size = alphabet_bit_size * distance;
-
-    /* allocate memory for representation */
-    ubit_size block_number = (cr->bit_size + UBLOCK_BIT_SIZE - 1) / UBLOCK_BIT_SIZE;
-    cr->bit_rep = (ublock *)malloc(block_number * sizeof(ublock));
-    memset(cr->bit_rep, 0, block_number * sizeof(ublock));
-
-    ubit_size shift = 0;
-    int block_index = block_number - 1;
-
-    for (const char *it = begin + distance - 1; begin <= it; it--) {
-
-        int o_bit_rep = alphabet[(int)(*it)];
-
-        /* shift and paste */
-        cr->bit_rep[block_index] |= (o_bit_rep << shift);
-
-        /* if there is an overflow after shifting, it pastes the */
-        /* overfloaw to the left block. */
-        if (shift + alphabet_bit_size > UBLOCK_BIT_SIZE) {
-            cr->bit_rep[block_index - 1] |= (o_bit_rep >> (UBLOCK_BIT_SIZE - shift));
-        }
-
-        if (shift + alphabet_bit_size >= UBLOCK_BIT_SIZE) {
-            block_index--;
-        }
-
-        shift = (shift + alphabet_bit_size) % UBLOCK_BIT_SIZE;
-    }
-    
     cr->label = 0;
-    cr->label |= ((distance-2) << (3 * alphabet_bit_size));
-    cr->label |= (alphabet[(*(begin)) & 0xDF] << (2 * alphabet_bit_size));
-    cr->label |= (alphabet[(*(begin+distance-2)) & 0xDF] << alphabet_bit_size);
-    cr->label |= (alphabet[(*(begin+distance-1)) & 0xDF]);
+    cr->label |= ((distance-2) << 6);
+    cr->label |= (alphabet[(int)(*begin)] << 4);
+    cr->label |= (alphabet[(int)(*(begin+distance-2))] << 2);
+    cr->label |= (alphabet[(int)(*(begin+distance-1))]);
+    cr->bit_rep = 0x8000000000000000 | cr->label;
+    cr->bit_size = 2 * distance;
 }
 
 void init_core2(struct core *cr, const char *begin, uint64_t distance, uint64_t start_index, uint64_t end_index) {
-
     cr->start = start_index;
     cr->end = end_index;
-    cr->bit_size = alphabet_bit_size * distance;
-
-    /* allocate memory for representation */
-    ubit_size block_number = (cr->bit_size + UBLOCK_BIT_SIZE - 1) / UBLOCK_BIT_SIZE;
-    cr->bit_rep = (ublock *)malloc(block_number * sizeof(ublock));
-    memset(cr->bit_rep, 0, block_number * sizeof(ublock));
-
-    ubit_size shift = 0;
-    int block_index = block_number - 1;
-
-    for (const char *it = begin + distance - 1; begin <= it; it--) {
-
-        int o_bit_rep = rc_alphabet[(int)(*it)];
-
-        /* shift and paste */
-        cr->bit_rep[block_index] |= (o_bit_rep << shift);
-
-        /* if there is an overflow after shifting, it pastes the */
-        /* overfloaw to the left block. */
-        if (shift + alphabet_bit_size > UBLOCK_BIT_SIZE) {
-            cr->bit_rep[block_index - 1] |= (o_bit_rep >> (UBLOCK_BIT_SIZE - shift));
-        }
-
-        if (shift + alphabet_bit_size >= UBLOCK_BIT_SIZE) {
-            block_index--;
-        }
-
-        shift = (shift + alphabet_bit_size) % UBLOCK_BIT_SIZE;
-    }
-
     cr->label = 0;
-    cr->label |= ((distance-2) << (3 * alphabet_bit_size));
-    cr->label |= (rc_alphabet[(*(begin)) & 0xDF] << (2 * alphabet_bit_size));
-    cr->label |= (rc_alphabet[(*(begin+distance-2)) & 0xDF] << alphabet_bit_size);
-    cr->label |= (rc_alphabet[(*(begin+distance-1)) & 0xDF]);
+    cr->label |= ((distance-2) << 6);
+    cr->label |= (rc_alphabet[(int)(*(begin))] << 4);
+    cr->label |= (rc_alphabet[(int)(*(begin+distance-2))] << 2);
+    cr->label |= (rc_alphabet[(int)(*(begin+distance-1))]);
+    cr->bit_rep = 0x8000000000000000 | cr->label;
+    cr->bit_size = 2 * distance;
 }
 
 void init_core3(struct core *cr, struct core *begin, uint64_t distance) {
-
-    // it is known that other core is placed in cr
-    free(cr->bit_rep);
-
     cr->start = begin->start;
     cr->end = (begin+distance-1)->end;
+    cr->bit_rep = 0;
     cr->bit_size = 0;
 
-    for (struct core *it = begin; it < begin + distance; it++) {
+    for (struct core *it=begin; it<begin+distance; it++) {
         cr->bit_size += it->bit_size;
     }
 
-    /* allocate memory for representation */
-    ubit_size block_number = (cr->bit_size + UBLOCK_BIT_SIZE - 1) / UBLOCK_BIT_SIZE;
-    cr->bit_rep = (ublock *)malloc(block_number * sizeof(ublock));
-    memset(cr->bit_rep, 0, block_number * sizeof(ublock));
-
-    ubit_size shift = 0;
-    int block_index = block_number - 1;
-
-    for (struct core *it = begin + distance - 1; begin <= it; it--) {
-
-        ublock *o_bit_rep = it->bit_rep;
-
-        for (int i = (it->bit_size - 1) / UBLOCK_BIT_SIZE; 0 <= i; i--) {
-
-            ubit_size curr_block_size = (i > 0 ? UBLOCK_BIT_SIZE : it->bit_size % UBLOCK_BIT_SIZE);
-
-            /* shift and paste */
-            cr->bit_rep[block_index] |= (o_bit_rep[i] << shift);
-
-            /* if there is an overflow after shifting, it pastes the */
-            /* overfloaw to the left block. */
-            if (shift + curr_block_size > UBLOCK_BIT_SIZE) {
-                cr->bit_rep[block_index - 1] |= (o_bit_rep[i] >> (UBLOCK_BIT_SIZE - shift));
-            }
-
-            if (shift + curr_block_size >= UBLOCK_BIT_SIZE) {
-                block_index--;
-            }
-
-            shift = (shift + curr_block_size) % UBLOCK_BIT_SIZE;
-        }
+    int index = 0;
+    for (struct core *it = begin+distance-1; begin <= it; it--) {
+        cr->bit_rep |= (it->bit_rep << index);
+        index += it->bit_size;
     }
 
     ulabel data[4];
@@ -225,7 +137,7 @@ void init_core3(struct core *cr, struct core *begin, uint64_t distance) {
     cr->label = MurmurHash3_32((void*)data, 4 * sizeof(ulabel), 42);
 }
 
-void init_core4(struct core *cr, ubit_size bit_size, ublock *bit_rep, ulabel label, uint64_t start, uint64_t end) {
+void init_core4(struct core *cr, ubit_size bit_size, uint64_t bit_rep, ulabel label, uint64_t start, uint64_t end) {
     cr->bit_size = bit_size;
     cr->bit_rep = bit_rep;
     cr->label = label;
@@ -233,176 +145,124 @@ void init_core4(struct core *cr, ubit_size bit_size, ublock *bit_rep, ulabel lab
     cr->end = end;
 }
 
-void free_core(struct core* cr) {
-    free(cr->bit_rep);
-    cr->bit_rep = NULL;
-}
-
 void core_compress(const struct core *left_core, struct core *right_core) {
-
-    ubit_size index = minimum(left_core->bit_size, right_core->bit_size);
-    ubit_size left_block = (left_core->bit_size - 1) / UBLOCK_BIT_SIZE,
-              right_block = (right_core->bit_size - 1) / UBLOCK_BIT_SIZE;
-
-    while (index >= UBLOCK_BIT_SIZE && left_core->bit_rep[left_block] == right_core->bit_rep[right_block]) {
-        left_block--;
-        right_block--;
-        index -= UBLOCK_BIT_SIZE;
+    if (left_core->bit_rep & 0x8000000000000000) { // if compressing 1-level cores
+        uint64_t left_core_3 = (left_core->bit_rep) & 3;
+        uint64_t left_core_2 = (left_core->bit_rep >> 2) & 3;
+        uint64_t left_core_middle_count = (left_core->bit_rep & 0x7FFFFFFFFFFFFFFF) >> 6;
+        uint64_t left_core_1 = (left_core->bit_rep >> 4) & 3;
+        
+        uint64_t right_core_3 = (right_core->bit_rep) & 3;
+        uint64_t right_core_2 = (right_core->bit_rep >> 2) & 3;
+        uint64_t right_core_middle_count = (right_core->bit_rep & 0x7FFFFFFFFFFFFFFF) >> 6;
+        uint64_t right_core_1 = (right_core->bit_rep >> 4) & 3;
+        
+        if (left_core_3 != right_core_3) { // if right characters mismatches
+            if ((left_core_3 & 1) != (right_core_3 & 1)) {
+                right_core->bit_rep = (right_core_3 & 1); // 0b00 + r % 2
+            } else {
+                right_core->bit_rep = 2 + ((right_core_3 >> 1) & 1); // 0b10 + r % 2
+            }
+            right_core->bit_size = 2;
+        } 
+        else if (left_core_2 != right_core_2) { // if middle characters mismatches
+            if ((left_core_2 & 1) != (right_core_2 & 1)) {
+                right_core->bit_rep = 4 + (right_core_2 & 1); // 0b100 + r % 2
+            } else {
+                right_core->bit_rep = 6 + ((right_core_2 >> 1) & 1); // 0b110 + r % 2
+            }
+            right_core->bit_size = (64 - __builtin_clzll(right_core->bit_rep));
+        } 
+        else if (left_core_middle_count != right_core_middle_count) { // middle character counts mismatches
+            if (left_core_middle_count < right_core_middle_count) {
+                // compare left_core_1 with right_core_2
+                if ((left_core_1 & 1) != (right_core_2 & 1)) {
+                    right_core->bit_rep = 4 * (left_core_middle_count + 1) + (right_core_2 & 1); // 2 * 2 * (mid + 1) + r % 2
+                } else {
+                    right_core->bit_rep = 2 * (2 * (left_core_middle_count + 1) + 1) + ((right_core_2 >> 1) & 1); // 2 * (2 * (mid + 1) + 1) + r % 2
+                }
+                right_core->bit_size = (64 - __builtin_clzll(right_core->bit_rep));
+            } else {
+                // compare left_core_2 with right_core_1
+                if ((left_core_2 & 1) != (right_core_1 & 1)) {
+                    right_core->bit_rep = 4 * (right_core_middle_count + 1) + (right_core_1 & 1);
+                } else {
+                    right_core->bit_rep = 2 * (2 * (right_core_middle_count + 1) + 1) + ((right_core_1 >> 1) & 1);
+                }
+                right_core->bit_size = (64 - __builtin_clzll(right_core->bit_rep));
+            }
+        } 
+        else if (left_core_1 != right_core_1) { // left characters mismatches
+            if ((left_core_1 & 1) != (right_core_1 & 1)) {
+                right_core->bit_rep = 4 * (left_core_middle_count + 1) + (right_core_1 & 1);
+            } else {
+                right_core->bit_rep = 2 * (2 * (left_core_middle_count + 1) + 1) + ((right_core_1 >> 1) & 1);
+            }
+            right_core->bit_size = (64 - __builtin_clzll(right_core->bit_rep));
+        } 
+        else { // they are same
+            right_core->bit_rep = 2 * right_core->bit_size;
+            right_core->bit_size = (64 - __builtin_clzll(right_core->bit_rep));
+        }
+    } else { // if compressing upper level (>1) cores
+        ubit_size first_differing_index = 64;
+        if (left_core->bit_rep != right_core->bit_rep) {
+            first_differing_index = __builtin_ctzll(left_core->bit_rep ^ right_core->bit_rep); // trailing zero count (0-index)
+        } else {
+            first_differing_index = right_core->bit_size;
+        }
+        first_differing_index = minimum(first_differing_index, minimum(left_core->bit_size, right_core->bit_size));
+        right_core->bit_rep = 2 * first_differing_index + ((right_core->bit_rep >> first_differing_index) & 1);
+        right_core->bit_size = right_core->bit_rep == 0 ? 2 : (64 - __builtin_clzll(right_core->bit_rep));
+        right_core->bit_size = right_core->bit_size < 2 ? 2 : right_core->bit_size;
     }
-
-    left_block = left_core->bit_rep[left_block];
-    right_block = right_core->bit_rep[right_block];
-
-    while (index > 0 && left_block % 2 == right_block % 2) {
-        left_block /= 2;
-        right_block /= 2;
-        index--;
-    }
-
-    if (right_core->bit_size > UBLOCK_BIT_SIZE) {
-        free(right_core->bit_rep);
-        right_core->bit_rep = (ublock *)malloc(sizeof(ublock));
-    }
-
-    right_core->bit_rep[0] = 0;
-
-    // shift left by 1 bit and set last bit to difference
-    right_core->bit_rep[0] = 2 * (minimum(right_core->bit_size, left_core->bit_size) - index) + (right_block % 2);
-    right_core->bit_size = 0;
-
-    if (right_core->bit_rep[0] > 0) {
-        right_core->bit_size = (32 - __builtin_clz(right_core->bit_rep[0]));
-    }
-
-    right_core->bit_size = right_core->bit_size > 1 ? right_core->bit_size : 2;
 
     // now, the right core is dependent on the left; hence, its coverage spans towards the left
     right_core->start = left_core->start;
 }
 
-uint64_t core_memsize(const struct core *cr) {
-    return sizeof(struct core) + sizeof(ublock) * ((cr->bit_size + UBLOCK_BIT_SIZE - 1) / UBLOCK_BIT_SIZE);
-}
-
 void print_core(const struct core *cr) {
-    uint64_t block_number = (cr->bit_size - 1) / UBLOCK_BIT_SIZE + 1;
-    for (int index = cr->bit_size - 1; 0 <= index; index--) {
-        printf("%d", (cr->bit_rep[block_number - index / UBLOCK_BIT_SIZE - 1] >> (index % UBLOCK_BIT_SIZE)) & 1);
+    if (cr->bit_rep & 0x8000000000000000) { // if printing 1-level cores
+        uint64_t middle_count = (0x7FFFFFFFFFFFFFFF & cr->bit_rep) >> 6;
+        uint64_t middle_val = (cr->bit_rep >> 2) & 3;
+        printf("%ld", ((cr->bit_rep >> 5) & 1));
+        printf("%ld", ((cr->bit_rep >> 4) & 1));
+        for (uint64_t i=0; i<middle_count; i++) {
+            printf("%ld", ((middle_val >> 1) & 1));
+            printf("%ld", (middle_val & 1));           
+        }
+        printf("%ld", ((cr->bit_rep >> 1) & 1));
+        printf("%ld", (cr->bit_rep & 1));
+    } else {
+        for (ubit_size index = cr->bit_size - 1; 0 < index; index--) {
+            printf("%ld", ((cr->bit_rep >> index) & 1));
+        }
+        printf("%ld", (cr->bit_rep & 1));
     }
 }
 
 // core comparison operator implementation
 
 int core_eq(const struct core *lhs, const struct core *rhs) {
-
-    if (lhs->bit_size != rhs->bit_size) {
-        return 0;
-    }
-
-    ubit_size index = 0;
-
-    while (index < lhs->bit_size) {
-        if (lhs->bit_rep[index / UBLOCK_BIT_SIZE] != rhs->bit_rep[index / UBLOCK_BIT_SIZE])
-            return 0;
-
-        index += UBLOCK_BIT_SIZE;
-    }
-
-    return 1;
+    return lhs->bit_rep == rhs->bit_rep;
 }
 
 int core_neq(const struct core *lhs, const struct core *rhs) {
-
-    if (lhs->bit_size != rhs->bit_size) {
-        return 1;
-    }
-
-    ubit_size index = 0;
-
-    while (index < lhs->bit_size) {
-        if (lhs->bit_rep[index / UBLOCK_BIT_SIZE] != rhs->bit_rep[index / UBLOCK_BIT_SIZE])
-            return 1;
-
-        index += UBLOCK_BIT_SIZE;
-    }
-
-    return 0;
+    return lhs->bit_rep != rhs->bit_rep;
 }
 
 int core_gt(const struct core *lhs, const struct core *rhs) {
-
-    if (lhs->bit_size != rhs->bit_size) {
-        return lhs->bit_size > rhs->bit_size;
-    }
-
-    ubit_size index = 0;
-
-    while (index < lhs->bit_size) {
-        if (lhs->bit_rep[index / UBLOCK_BIT_SIZE] == rhs->bit_rep[index / UBLOCK_BIT_SIZE]) {
-            index += UBLOCK_BIT_SIZE;
-            continue;
-        }
-
-        return lhs->bit_rep[index / UBLOCK_BIT_SIZE] > rhs->bit_rep[index / UBLOCK_BIT_SIZE];
-    }
-
-    return 0;
+    return lhs->bit_rep > rhs->bit_rep;
 }
 
 int core_lt(const struct core *lhs, const struct core *rhs) {
-
-    if (lhs->bit_size != rhs->bit_size) {
-        return lhs->bit_size < rhs->bit_size;
-    }
-
-    ubit_size index = 0;
-
-    while (index < lhs->bit_size) {
-        if (lhs->bit_rep[index / UBLOCK_BIT_SIZE] == rhs->bit_rep[index / UBLOCK_BIT_SIZE]) {
-            index += UBLOCK_BIT_SIZE;
-            continue;
-        }
-
-        return lhs->bit_rep[index / UBLOCK_BIT_SIZE] < rhs->bit_rep[index / UBLOCK_BIT_SIZE];
-    }
-
-    return 0;
+    return lhs->bit_rep < rhs->bit_rep;
 }
 
 int core_geq(const struct core *lhs, const struct core *rhs) {
-
-    if (lhs->bit_size != rhs->bit_size) {
-        return lhs->bit_size >= rhs->bit_size;
-    }
-
-    ubit_size index = 0;
-
-    while (index < lhs->bit_size) {
-        if (lhs->bit_rep[index / UBLOCK_BIT_SIZE] != rhs->bit_rep[index / UBLOCK_BIT_SIZE]) {
-            return lhs->bit_rep[index / UBLOCK_BIT_SIZE] >= rhs->bit_rep[index / UBLOCK_BIT_SIZE];
-        }
-
-        index += UBLOCK_BIT_SIZE;
-    }
-
-    return 1;
+    return lhs->bit_rep >= rhs->bit_rep;
 }
 
 int core_leq(const struct core *lhs, const struct core *rhs) {
-
-    if (lhs->bit_size != rhs->bit_size) {
-        return lhs->bit_size <= rhs->bit_size;
-    }
-
-    ubit_size index = 0;
-
-    while (index < lhs->bit_size) {
-        if (lhs->bit_rep[index / UBLOCK_BIT_SIZE] != rhs->bit_rep[index / UBLOCK_BIT_SIZE]) {
-            return lhs->bit_rep[index / UBLOCK_BIT_SIZE] <= rhs->bit_rep[index / UBLOCK_BIT_SIZE];
-        }
-
-        index += UBLOCK_BIT_SIZE;
-    }
-
-    return 1;
+    return lhs->bit_rep <= rhs->bit_rep;
 }

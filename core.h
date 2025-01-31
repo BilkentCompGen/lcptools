@@ -46,18 +46,16 @@ extern "C" {
 #include <stdlib.h>
 #include <stdint.h> 
 
-#define UBLOCK_BIT_SIZE 32
 #define DCT_ITERATION_COUNT 1
 
 #define minimum(a, b) ((a) < (b) ? (a) : (b))
 
-typedef unsigned int ublock;
 typedef uint32_t ubit_size;
 typedef uint32_t ulabel;
 
 struct core {
     ubit_size bit_size;
-    ublock *bit_rep;
+    uint64_t bit_rep;
     ulabel label;
     uint64_t start;
     uint64_t end;
@@ -118,18 +116,7 @@ void init_core3(struct core *cr, struct core *begin, uint64_t distance);
  * @param start Start index of the substring or sequence represented by the core.
  * @param end End index of the substring or sequence represented by the core.
  */
-void init_core4(struct core *cr, ubit_size bit_size, ublock *bit_rep, ulabel label, uint64_t start, uint64_t end);
-
-/**
- * @brief Frees the allocated memory associated with a core structure.
- * 
- * This function ensures that all dynamically allocated resources (e.g., the bit 
- * representation array) associated with the given core structure are properly 
- * released, preventing memory leaks.
- * 
- * @param cr Pointer to the core structure to deallocate.
- */
-void free_core(struct core* cr);
+void init_core4(struct core *cr, ubit_size bit_size, uint64_t bit_rep, ulabel label, uint64_t start, uint64_t end);
 
 /**
  * @brief Compresses the right `core` object by comparing it with
@@ -143,16 +130,6 @@ void free_core(struct core* cr);
  * @param right_core The `core` object that will be compressed.
  */
 void core_compress(const struct core *left_core, struct core *right_core);
-
-/**
- * @brief Calculates the total memory size used by the `core` object.
- *
- * This function computes the memory used by the `core` object,
- * including the bit sequence and metadata.
- *
- * @return The total memory size in bytes.
- */
-uint64_t core_memsize(const struct core *cr);
 
 /**
  * @brief Output the bit representation of a `core` object.

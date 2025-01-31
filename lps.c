@@ -59,35 +59,9 @@ void init_lps3(struct lps *lps_ptr, FILE *in) {
     if (lps_ptr->size) {
         // allocate memory for the cores array
         lps_ptr->cores = (struct core *)malloc(lps_ptr->size * sizeof(struct core));
-
-        // read each core object from the file
-        for (int i = 0; i < lps_ptr->size; i++) {
-            struct core *cr = &(lps_ptr->cores[i]);
-
-            if (fread(&(cr->bit_size), sizeof(ubit_size), 1, in) != 1) {
-                fprintf(stderr, "Error reading bit_size from file at %d\n", i);
-                exit(EXIT_FAILURE);
-            }
-    
-            ubit_size block_number = (cr->bit_size + UBLOCK_BIT_SIZE - 1) / UBLOCK_BIT_SIZE;
-            cr->bit_rep = (ublock *)malloc(block_number * sizeof(ublock));
-            if (fread(cr->bit_rep, block_number * sizeof(ublock), 1, in) != 1) {
-                fprintf(stderr, "Error reading bit_rep from file at %d\n", i);
-                exit(EXIT_FAILURE);
-            }
-         
-            if (fread(&(cr->label), sizeof(ulabel), 1, in) != 1) {
-                fprintf(stderr, "Error reading label from file at %d\n", i);
-                exit(EXIT_FAILURE);
-            }
-            if (fread(&(cr->start), sizeof(uint64_t), 1, in) != 1) {
-                fprintf(stderr, "Error reading start from file at %d\n", i);
-                exit(EXIT_FAILURE);
-            }
-            if (fread(&(cr->end), sizeof(uint64_t), 1, in) != 1) {
-                fprintf(stderr, "Error reading end from file at %d\n", i);
-                exit(EXIT_FAILURE);
-            }
+        if (fread(lps_ptr->cores, lps_ptr->size * sizeof(struct core), 1, in) != 1) {
+            fprintf(stderr, "Error reading cores from file\n");
+            exit(EXIT_FAILURE);
         }
     }
 }
@@ -135,9 +109,6 @@ void init_lps4(struct lps *lps_ptr, const char *str, int len, int lcp_level, int
                     break;
                 overlap--;
             }
-            for(int i=0; i<overlap; i++) {
-                free_core(&(temp_lps.cores[i]));
-            }
             memcpy(lps_ptr->cores+core_index, temp_lps.cores+overlap, (temp_lps.size-overlap)*sizeof(struct core));
             core_index += (temp_lps.size-overlap);
             lps_ptr->size += (temp_lps.size-overlap);
@@ -168,9 +139,6 @@ void init_lps4(struct lps *lps_ptr, const char *str, int len, int lcp_level, int
 }
 
 void free_lps(struct lps *lps_ptr) {
-    for(int i=0; i<lps_ptr->size; i++) {
-        free(lps_ptr->cores[i].bit_rep);
-    }
     free(lps_ptr->cores);
     lps_ptr->size = 0;
 }
@@ -184,18 +152,7 @@ void write_lps(struct lps *lps_ptr, FILE *out) {
 
     // write each core object iteratively
     if (lps_ptr->size) {
-        for (int i = 0; i < lps_ptr->size; i++) {
-            const struct core *cr = &(lps_ptr->cores[i]);
-
-            fwrite(&(cr->bit_size), sizeof(ubit_size), 1, out);
-            
-            ubit_size block_number = (cr->bit_size + UBLOCK_BIT_SIZE - 1) / UBLOCK_BIT_SIZE;
-            fwrite(cr->bit_rep, sizeof(ublock), block_number, out);
-            
-            fwrite(&(cr->label), sizeof(ulabel), 1, out);
-            fwrite(&(cr->start), sizeof(uint64_t), 1, out);
-            fwrite(&(cr->end), sizeof(uint64_t), 1, out);
-        }
+        fwrite(lps_ptr->cores, lps_ptr->size*sizeof(struct core), 1, out);
     }
 }
 
@@ -204,11 +161,17 @@ int parse1(const char *begin, const char *end, struct core *cores, uint64_t offs
     const char *it1 = begin;
     const char *it2 = end;
     int core_index = 0;
+    int last_invalid_char_index = -1;
 
     // find lcp cores
     for (; it1 + 2 < end; it1++) {
 
         // skip invalid character
+        if (alphabet[(unsigned char)*it1] == -1) {
+            last_invalid_char_index = it1 - begin;
+            continue;
+        }
+
         if (alphabet[(unsigned char)*it1] == alphabet[(unsigned char)*(it1+1)]) {
             continue;
         }
@@ -225,7 +188,7 @@ int parse1(const char *begin, const char *end, struct core *cores, uint64_t offs
             }
             if (temp != end) {
                 // check if there is any SSEQ cores left behind
-                if (it2 < it1) {
+                if (it2 < it1 && last_invalid_char_index < it2 - begin - 1) {
                     init_core1(&(cores[core_index]), it2-1, it1-it2+2, it2-begin-1+offset, it1-begin+1+offset);
                     core_index++;
                 }
@@ -243,7 +206,7 @@ int parse1(const char *begin, const char *end, struct core *cores, uint64_t offs
             alphabet[(unsigned char)*(it1+1)] < alphabet[(unsigned char)*(it1+2)]) {
 
             // check if there is any SSEQ cores left behind
-            if (it2 < it1) {
+            if (it2 < it1 && last_invalid_char_index < it2 - begin - 1) {
                 init_core1(&(cores[core_index]), it2-1, it1-it2+2, it2-begin-1+offset, it1-begin+1+offset);
                 core_index++;
             }
@@ -268,7 +231,7 @@ int parse1(const char *begin, const char *end, struct core *cores, uint64_t offs
             alphabet[(unsigned char)*(it1+2)] >= alphabet[(unsigned char)*(it1+3)]) {
 
             // check if there is any SSEQ cores left behind
-            if (it2 < it1) {
+            if (it2 < it1 && last_invalid_char_index < it2 - begin - 1) {
                 init_core1(&(cores[core_index]), it2-1, it1-it2+2, it2-begin-1+offset, it1-begin+1+offset);
                 core_index++;
             }
@@ -290,11 +253,17 @@ int parse2(const char *begin, const char *end, struct core *cores, uint64_t offs
     const char *it1 = begin;
     const char *it2 = end;
     int core_index = 0;
+    int last_invalid_char_index = -1;
 
     // find lcp cores
     for (; it1 + 2 < end; it1++) {
 
         // skip invalid character
+        if (rc_alphabet[(unsigned char)*it1] == -1) {
+            last_invalid_char_index = it1 - begin;
+            continue;
+        }
+
         if (rc_alphabet[(unsigned char)*it1] == rc_alphabet[(unsigned char)*(it1+1)]) {
             continue;
         }
@@ -311,7 +280,7 @@ int parse2(const char *begin, const char *end, struct core *cores, uint64_t offs
             }
             if (temp != end) {
                 // check if there is any SSEQ cores left behind
-                if (it2 < it1) {
+                if (it2 < it1 && last_invalid_char_index < it2 - begin - 1) {
                     init_core2(&(cores[core_index]), it2-1, it1-it2+2, it2-begin-1+offset, it1-begin+1+offset);
                     core_index++;
                 }
@@ -329,7 +298,7 @@ int parse2(const char *begin, const char *end, struct core *cores, uint64_t offs
             rc_alphabet[(unsigned char)*(it1+1)] < rc_alphabet[(unsigned char)*(it1+2)]) {
 
             // check if there is any SSEQ cores left behind
-            if (it2 < it1) {
+            if (it2 < it1 && last_invalid_char_index < it2 - begin - 1) {
                 init_core2(&(cores[core_index]), it2-1, it1-it2+2, it2-begin-1+offset, it1-begin+1+offset);
                 core_index++;
             }
@@ -354,7 +323,7 @@ int parse2(const char *begin, const char *end, struct core *cores, uint64_t offs
             rc_alphabet[(unsigned char)*(it1+2)] >= rc_alphabet[(unsigned char)*(it1+3)]) {
 
             // check if there is any SSEQ cores left behind
-            if (it2 < it1) {
+            if (it2 < it1 && last_invalid_char_index < it2 - begin - 1) {
                 init_core2(&(cores[core_index]), it2-1, it1-it2+2, it2-begin-1+offset, it1-begin+1+offset);
                 core_index++;
             }
@@ -457,13 +426,7 @@ int parse3(struct core *begin, struct core *end, struct core *cores) {
 }
 
 int64_t lps_memsize(const struct lps *lps_ptr) {
-    uint64_t total = sizeof(struct lps);
-    
-    for(int i=0; i<lps_ptr->size; i++) {
-        total += core_memsize(&(lps_ptr->cores[i]));
-    }
-
-    return total;
+    return sizeof(struct lps) + lps_ptr->size * sizeof(struct core);
 }
 
 /**
@@ -501,9 +464,6 @@ int lps_deepen1(struct lps *lps_ptr) {
 
     // compress cores
     if (lcp_dct(lps_ptr) < 0) {
-        for(int i=0; i<lps_ptr->size; i++) {
-            free(lps_ptr->cores[i].bit_rep);
-        }
         lps_ptr->size = 0;
         lps_ptr->level++;
         return 0;
@@ -515,7 +475,6 @@ int lps_deepen1(struct lps *lps_ptr) {
 
     // remove old cores
     while(temp < lps_ptr->size) {
-        free(lps_ptr->cores[temp].bit_rep);
         temp++;
     }
     lps_ptr->size = new_size;

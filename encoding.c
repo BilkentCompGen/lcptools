@@ -13,7 +13,6 @@
 int alphabet[128];
 int rc_alphabet[128];
 char characters[128];
-int alphabet_bit_size;
 
 void LCP_SUMMARY() {
     printf("# Alphabet encoding summary\n");
@@ -24,7 +23,6 @@ void LCP_SUMMARY() {
         }
     }
     printf("\n");
-    printf("# Alphabet bit size: %d", alphabet_bit_size);
 }
 
 void LCP_INIT() {
@@ -52,8 +50,6 @@ void LCP_INIT2(int verbose) {
     characters[1] = 'C';
     characters[2] = 'G';
     characters[3] = 'T';
-
-    alphabet_bit_size = 2;
 
     if (verbose)
         LCP_SUMMARY();
@@ -93,7 +89,10 @@ int LCP_INIT_FILE(const char *encoding_file, int verbose) {
         mx = mx / 2;
     }
 
-    alphabet_bit_size = bit_count;
+    if (bit_count != 2) {
+        fprintf(stderr, "You alphabet has to have at most 2 binary digits in encoding. %d", bit_count);
+        exit(EXIT_FAILURE);
+    }
 
     return 0;
 }

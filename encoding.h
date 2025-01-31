@@ -61,7 +61,6 @@ extern "C" {
 extern int alphabet[128];
 extern int rc_alphabet[128];
 extern char characters[128];
-extern int alphabet_bit_size;
 
 /**
  * @brief Displays the alphabet encoding summary including coefficients

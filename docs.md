@@ -23,7 +23,7 @@ struct lps {
 
 struct core {
     ubit_size bit_size;  // Size of the bit representation
-    ublock *bit_rep;     // Pointer to the bit representation
+    uint64_t bit_rep;     // Pointer to the bit representation
     ulabel label;        // Unique label for the core
     uint64_t start;      // Start index in the string
     uint64_t end;        // End index in the string
@@ -31,6 +31,17 @@ struct core {
 ```
 
 ---
+
+Besides the original implementation, this version is highly optimized for bioinformatics tools.
+
+LCP level-1 cores are encoded as follows:
+
+```txt
+<middle-char-count><right-char><middle-char><left-char>
+```
+
+Upper-level cores are encoded as concatenated forms of compressed lower-level cores. 
+The functionalities are implemented to handle both types internally, yet the alphabet size cannot be greater than **2**.
 
 ## Functions
 
