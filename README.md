@@ -176,19 +176,6 @@ Processes the input string and identifies cores that adhere to specific rules:
     
     Ex: $w = xyza_0 . . . a_nklm$, where $n \geq 1$ and $xyz$ and $klm$ are identified as cores, and $z \lt a_0 \lt \dots \lt a_n \lt k$ or $z \gt a_0 \gt \dots \gt a_n \gt k$.
 
-### Deterministic Coin Tossing:
-
-The dct function in the LCP algorithm is crucial for processing binary sequences. It starts by pinpointing the initial point of difference between two binary strings, beginning from the right-end. The function then assesses the difference based on the position and value of the divergent bit. This detail is transformed into a new binary sequence, which establishes the foundation of a newly generated 'core'. This core is a clear representation of the differences between the original sequences, integral to the algorithm's deepening process. Essentially, the dct function effectively consolidates and encapsulates the information, ensuring efficient further analysis within the LCP framework.
-
-Ex: 11101**0**00 vs 00010**1**00 -> **10**0 as the position is **2 (10)** and the bit is **0**. Position index start from 0.
-
 ### Deepen Function:
 
-The deepen function in the LCP algorithm primarily focuses on the compression of 'cores' alongside their left neighbors. The purpose of this repeated compression (dct) is to manage the length of the cores, preventing them from becoming large. After a compression, the LCP algorithm is re-applied. This re-application aims to identify new cores within the compressed data. In this context, each compressed core is treated as a discrete value, represented in binary form. This representation facilitates efficient processing and analysis within the algorithm.
-
-This function iteratively compresses and processes cores to find new cores in compliance with the rules stated above.
-
-## Default Variables
-
-The default iteration count for compression in each deepening is set to 1.
-
+The LCP algorithm is re-applied to the LCP cores' labels (rules over `core.label % 4`). This re-application aims to identify new cores within the core label data. In this context, each lcp core is treated as a discrete value, formed with hashed value. This representation facilitates efficient processing and analysis within the algorithm.

@@ -46,18 +46,11 @@ extern "C" {
 #include <stdlib.h>
 #include <stdint.h> 
 
-#define UBLOCK_BIT_SIZE 32
-#define DCT_ITERATION_COUNT 1
-
 #define minimum(a, b) ((a) < (b) ? (a) : (b))
 
-typedef unsigned int ublock;
-typedef uint32_t ubit_size;
 typedef uint32_t ulabel;
 
 struct core {
-    ubit_size bit_size;
-    ublock *bit_rep;
     ulabel label;
     uint64_t start;
     uint64_t end;
@@ -112,47 +105,11 @@ void init_core3(struct core *cr, struct core *begin, uint64_t distance);
  * deserializing or cloning a core structure.
  * 
  * @param cr Pointer to the core structure to initialize.
- * @param bit_size Size of the bit representation in bits.
- * @param bit_rep Pointer to the precomputed bit representation array.
  * @param label Unique label assigned to the core structure.
  * @param start Start index of the substring or sequence represented by the core.
  * @param end End index of the substring or sequence represented by the core.
  */
-void init_core4(struct core *cr, ubit_size bit_size, ublock *bit_rep, ulabel label, uint64_t start, uint64_t end);
-
-/**
- * @brief Frees the allocated memory associated with a core structure.
- * 
- * This function ensures that all dynamically allocated resources (e.g., the bit 
- * representation array) associated with the given core structure are properly 
- * released, preventing memory leaks.
- * 
- * @param cr Pointer to the core structure to deallocate.
- */
-void free_core(struct core* cr);
-
-/**
- * @brief Compresses the right `core` object by comparing it with
- * left `core` object.
- *
- * This function compresses the core's bit sequence by identifying
- * common patterns between the right `core` object and left `core` object,
- * and reduces the size of the sequence accordingly.
- *
- * @param left_core The `core` object to compare against for compression.
- * @param right_core The `core` object that will be compressed.
- */
-void core_compress(const struct core *left_core, struct core *right_core);
-
-/**
- * @brief Calculates the total memory size used by the `core` object.
- *
- * This function computes the memory used by the `core` object,
- * including the bit sequence and metadata.
- *
- * @return The total memory size in bytes.
- */
-uint64_t core_memsize(const struct core *cr);
+void init_core4(struct core *cr, ulabel label, uint64_t start, uint64_t end);
 
 /**
  * @brief Output the bit representation of a `core` object.
@@ -175,27 +132,7 @@ void print_core(const struct core *cr);
  * @param rhs The right-hand side `core` object.
  * @return 1 if the two objects are equal, 0 otherwise.
  */
-int core_eq(const struct core *lhs, const struct core *rhs);
-
-/**
- * @brief Operator overload for greater-than comparison between two `core`
- * objects.
- *
- * @param lhs The left-hand side `core` object.
- * @param rhs The right-hand side `core` object.
- * @return 1 if the left-hand object is greater, 0 otherwise.
- */
-int core_neq(const struct core *lhs, const struct core *rhs);
-
-/**
- * @brief Operator overload for smaller-than comparison between two `core`
- * objects.
- *
- * @param lhs The left-hand side `core` object.
- * @param rhs The right-hand side `core` object.
- * @return 1 if the left-hand object is smaller, 0 otherwise.
- */
-int core_gt(const struct core *lhs, const struct core *rhs);
+#define core_eq(lhs, rhs) ((lhs)->label & 3) == ((rhs)->label & 3)
 
 /**
  * @brief Operator overload for not-equal-to comparison between two `core`
@@ -205,7 +142,27 @@ int core_gt(const struct core *lhs, const struct core *rhs);
  * @param rhs The right-hand side `core` object.
  * @return 1 if the two objects are not equal, 0 otherwise.
  */
-int core_lt(const struct core *lhs, const struct core *rhs);
+#define core_neq(lhs, rhs) ((lhs)->label & 3) != ((rhs)->label & 3)
+
+/**
+ * @brief Operator overload for greater-than comparison between two `core`
+ * objects.
+ *
+ * @param lhs The left-hand side `core` object.
+ * @param rhs The right-hand side `core` object.
+ * @return 1 if the left-hand object is greater, 0 otherwise.
+ */
+#define core_gt(lhs, rhs) ((lhs)->label & 3) > ((rhs)->label & 3)
+
+/**
+ * @brief Operator overload for smaller-than comparison between two `core`
+ * objects.
+ *
+ * @param lhs The left-hand side `core` object.
+ * @param rhs The right-hand side `core` object.
+ * @return 1 if the left-hand object is smaller, 0 otherwise.
+ */
+#define core_lt(lhs, rhs) ((lhs)->label & 3) < ((rhs)->label & 3)
 
 /**
  * @brief Operator overload for greater-than-or-equal-to comparison between
@@ -215,7 +172,7 @@ int core_lt(const struct core *lhs, const struct core *rhs);
  * @param rhs The right-hand side `core` object.
  * @return 1 if the left-hand object is greater than or equal, 0 otherwise.
  */
-int core_geq(const struct core *lhs, const struct core *rhs);
+#define core_geq(lhs, rhs) ((lhs)->label & 3) >= ((rhs)->label & 3)
 
 /**
  * @brief Operator overload for smaller-than-or-equal-to comparison between
@@ -225,7 +182,7 @@ int core_geq(const struct core *lhs, const struct core *rhs);
  * @param rhs The right-hand side `core` object.
  * @return 1 if the left-hand object is smaller than or equal, 0 otherwise.
  */
-int core_leq(const struct core *lhs, const struct core *rhs);
+#define core_leq(lhs, rhs) ((lhs)->label & 3) <= ((rhs)->label & 3)
 
 #ifdef __cplusplus
 }
