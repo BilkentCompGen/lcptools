@@ -7,6 +7,8 @@ This repository contains an implementation of the Locally Consistent Parsing (LC
 
 For additional details about the data structure, please refer to [this document](https://github.com/BilkentCompGen/lcptools/blob/main/docs.md).
 
+If you use LCP (or *lcptools*) in your work, please consider citing our [arXiv paper](https://doi.org/10.48550/arXiv.2511.12205).
+
 ## Features
 
 - **Efficient LCP Computation:** Implemented in C for efficient and scalable computation on large datasets.
@@ -191,4 +193,3 @@ This function iteratively compresses and processes cores to find new cores in co
 ## Default Variables
 
 The default iteration count for compression in each deepening is set to 1.
-
