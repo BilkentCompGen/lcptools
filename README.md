@@ -7,7 +7,8 @@ This repository contains an implementation of the Locally Consistent Parsing (LC
 
 For additional details about the data structure, please refer to [this document](https://github.com/BilkentCompGen/lcptools/blob/main/docs.md).
 
-If you use LCP (or *lcptools*) in your work, please consider citing our [arXiv paper](https://doi.org/10.48550/arXiv.2511.12205).
+If you use LCP (or *lcptools*) in your work, please cite:
+- LCPan: efficient variation graph construction using Locally Consistent Parsing. Akmuhammet Ashyralyyev, Zülal Bingöl, Begüm Filiz Öz, Salem Malikic, Uzi Vishkin, S. Cenk Sahinalp, Can Alkan. [arXiv: 2511.12205](https://doi.org/10.48550/arXiv.2511.12205), 2025.
 
 ## Features
 
