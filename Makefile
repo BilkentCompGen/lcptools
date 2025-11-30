@@ -48,7 +48,7 @@ clean:
 	rm -f $(TEST_DIR)/*.o 
 	@echo "rm $(LIB_DIR)/$(STATIC)";
 	@if [ -f "$(LIB_DIR)/$(STATIC)" ]; then \
-		rm $(LIB_DIR)/$(STATIC) 2>/tmp/lcptools.err || \
+		rm -f $(LIB_DIR)/$(STATIC) || \
 			{ \
 				echo "Couldn't remove $(LIB_DIR)/$(STATIC)"; \
 				exit 1; \
@@ -56,7 +56,7 @@ clean:
 	fi
 	@echo "rm $(LIB_DIR)/$(DYNAMIC)";
 	@if [ -f "$(LIB_DIR)/$(DYNAMIC)" ]; then \
-		rm $(LIB_DIR)/$(DYNAMIC) 2>/tmp/lcptools.err || \
+		rm -f $(LIB_DIR)/$(DYNAMIC) || \
 			{ \
 				echo "Couldn't remove $(LIB_DIR)/$(DYNAMIC)"; \
 				exit 1; \

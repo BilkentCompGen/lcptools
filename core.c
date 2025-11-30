@@ -124,7 +124,7 @@ void init_core3(struct core *cr, struct core *begin, uint64_t distance) {
     }
 
     int index = 0;
-    for (struct core *it = begin+distance-1; begin <= it; it--) {
+    for (struct core *it = begin+distance-1; begin <= it && index + it->bit_size <= 64; it--) {
         cr->bit_rep |= (it->bit_rep << index);
         index += it->bit_size;
     }
