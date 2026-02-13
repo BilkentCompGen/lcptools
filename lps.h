@@ -54,10 +54,13 @@ extern "C" {
 
 #include "core.h"
 #include "encoding.h"
+#include <pthread.h>
 #include <stdio.h>
 #include <math.h>
 
-#define CONSTANT_FACTOR         1.5
+#ifndef CONSTANT_FACTOR
+#define CONSTANT_FACTOR     1.5
+#endif
 
 struct lps {
     int level;
@@ -219,6 +222,26 @@ int lps_deepen1(struct lps *lps_ptr);
 int lps_deepen(struct lps *lps_ptr, int lcp_level);
 
 /**
+ * @brief Deepens the compression level of the LCP structure in parallel. This method 
+ * compresses the existing cores and finds new cores.
+ *
+ * @param lps_ptr The `lps` object that will be parsed over.
+ * @param thread_number The number of theads to run the DCT.
+ * @return 1 if successful in deepening the structure, 0 otherwise.
+ */
+int lps_deepen1_parallel(struct lps *lps_ptr, int thread_number);
+
+/**
+ * @brief Deepens the compression level of the LCP structure to a specific level in threads.
+ *
+ * @param lps_ptr The `lps` object that will be parsed over.
+ * @param lcp_level The target compression level to deepen to.
+ * @param thread_number The number of theads to run the DCT.
+ * @return 1 if deepening was successful, 0 otherwise.
+ */
+int lps_deepen_parallel(struct lps *lps_ptr, int lcp_level, int thread_number);
+
+/**
  * @brief Outputs the representation of a `lcp` pointer.
  *
  * This function iterates over the cores in the `cores` array and outputs them.
@@ -253,6 +276,7 @@ int lps_eq(const struct lps *lhs, const struct lps *rhs);
  * @return 1 if the lps objects are not equal, 0 otherwise.
  */
 int lps_neq(const struct lps *lhs, const struct lps *rhs);
+
 
 #ifdef __cplusplus
 }

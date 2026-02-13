@@ -252,6 +252,30 @@ void test_lps_reverse_complement() {
 	log("...  test_lps_reverse_complement passed!");
 }
 
+void test_lps_parallel() {
+
+    std::string test_string = "GGGACCTGGTGACCCCAGCCCACGACAGCCAAGCGCCAGCTGAGCTCAGGTGTGAGGAGATCACAGTCCT";
+	
+    struct lps lps_obj1;
+    init_lps(&lps_obj1, test_string.c_str(), test_string.size());
+	
+    struct lps lps_obj2;
+    init_lps(&lps_obj2, test_string.c_str(), test_string.size());
+
+    lps_deepen1(&lps_obj1);
+    lps_deepen1_parallel(&lps_obj2, 4);
+
+    assert(lps_obj1.size == lps_obj2.size && "Core sizes at level 1 should match");
+	for (int i = 0; i < lps_obj1.size; i++) {
+		assert(core_eq(&(lps_obj1.cores[i]), &(lps_obj2.cores[i])) && "Cores at level 1 should match");
+	}
+    
+    free_lps(&lps_obj1);
+    free_lps(&lps_obj2);
+
+	log("...  test_lps_parallel passed!");
+}
+
 void test_lps_split_init() {
 
     LCP_INIT();
@@ -276,6 +300,12 @@ void test_lps_split_init() {
 
     struct lps lps_obj2;
     init_lps4(&lps_obj2, sequence.c_str(), sequence.size(), 7, 100000);
+
+    assert(lps_obj1.size == lps_obj2.size && "Core size should match between regular and split init");
+
+    for (int i = 0; i < lps_obj1.size; i++) {
+		assert(core_eq(&(lps_obj1.cores[i]), &(lps_obj2.cores[i])) && "Cores at level 1 should match");
+	}
 
     assert(lps_eq(&lps_obj1, &lps_obj2) && "LCP split and merge result should be same as processing linearly");
 
@@ -492,6 +522,7 @@ int main() {
 
 	test_lps_constructor();
     test_lps_reverse_complement();
+    test_lps_parallel();
     test_lps_split_init();
     test_lps_file_io();
 	test_lps_deepen();

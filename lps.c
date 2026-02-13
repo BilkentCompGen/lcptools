@@ -482,6 +482,247 @@ int lps_deepen(struct lps *lps_ptr, int lcp_level) {
     return 1;
 }
 
+typedef struct {
+    struct core *cores;     // destination cores (real array)
+    struct core dummy_left; // uncompressed core at begin-1
+    int offset_begin;       // inclusive i
+    int offset_end;         // exclusive i
+    int flags;              // 1 bit (process head) 1 bit (level 1 or not)
+} dct_worker_args_t;
+
+/**
+ * @brief Worker routine for parallel DCT compression.
+ *
+ * This function is executed by a single POSIX thread and performs
+ * compression on a contiguous subrange of cores. The behavior depends
+ * on the `flags` field:
+ *
+ * - flags == -1 : No work is performed (thread exits immediately).
+ * - flags % 2   : Use core_compress_level1().
+ * - otherwise   : Use core_compress_upper().
+ *
+ * If flags > 1, the worker also performs an additional boundary
+ * compression using `dummy_left` and the first core in its range.
+ * This is required when the thread's assigned range does not begin
+ * at the global DCT starting index, ensuring correctness across
+ * chunk boundaries.
+ *
+ * The function assumes that:
+ * - Each thread operates on a disjoint range of cores.
+ * - Any required boundary state is provided through `dummy_left`.
+ *
+ * @param argp Pointer to a dct_worker_args_t structure containing
+ *             the thread parameters.
+ *
+ * @return Always returns NULL (required by pthread signature).
+ */
+static void *dct_worker(void *argp) {
+    dct_worker_args_t *dct_params = (dct_worker_args_t *)argp;
+
+    if (dct_params->flags == -1) return NULL;
+
+    if (dct_params->flags % 2) {
+        for (int i = dct_params->offset_end - 1; dct_params->offset_begin < i; i--) {
+            core_compress_level1(dct_params->cores + (i - 1), dct_params->cores + i);
+        }
+        if (dct_params->flags > 1) {
+            core_compress_level1(&(dct_params->dummy_left), dct_params->cores + dct_params->offset_begin);
+        }
+    } else {
+        for (int i = dct_params->offset_end - 1; dct_params->offset_begin < i; i--) {
+            core_compress_upper(dct_params->cores + (i - 1), dct_params->cores + i);
+        }
+        if (dct_params->flags > 1) {
+            core_compress_upper(&(dct_params->dummy_left), dct_params->cores + dct_params->offset_begin);
+        }
+    }
+
+    return NULL;
+}
+
+/**
+ * @brief Executes one parallel DCT sweep over the cores array.
+ *
+ * This function divides the compression work starting at `dct_index`
+ * into approximately equal chunks and distributes them among
+ * `thread_number` threads. Each thread processes a contiguous
+ * subrange of cores using the dct_worker() routine.
+ *
+ * Work partitioning:
+ * - total = lps_ptr->size - dct_index
+ * - chunk size is computed using ceiling division.
+ * - Each thread receives a non-overlapping [begin, end) interval.
+ *
+ * Boundary handling:
+ * - Threads whose range does not start at dct_index receive a
+ *   copy of the left boundary core (`dummy_left`) to ensure
+ *   correct cross-boundary compression.
+ *
+ * Memory management:
+ * - Dynamically allocates thread handles and argument arrays.
+ * - Joins all threads before returning.
+ *
+ * @param lps_ptr       Pointer to the LPS structure containing cores.
+ * @param dct_index     Starting index for this DCT iteration.
+ * @param thread_number Number of worker threads to spawn.
+ *
+ * @return 0 on success.
+ * @return -1 on allocation failure.
+ */
+static int run_parallel_sweep(struct lps *lps_ptr, int dct_index, int thread_number) {
+
+    const int total = (int)lps_ptr->size - dct_index;   // number of pairs (i, i+1)
+    if (total <= 0) return 0;                               // nothing to do
+    const int chunk = (total + thread_number - 1) / thread_number;
+
+    pthread_t *threads = (pthread_t *)malloc(sizeof(pthread_t) * thread_number);
+    dct_worker_args_t *args = (dct_worker_args_t *)malloc(sizeof(dct_worker_args_t) * thread_number);
+
+    if (!threads || !args) {
+        perror("LCP: couldn't allocate thread arguments\n");
+        return -1;
+    }
+
+    for (int t = 0; t < thread_number; t++) {
+        int begin = dct_index + t * chunk;
+        int end = ((begin + chunk) <= lps_ptr->size ? (begin + chunk) : lps_ptr->size);
+
+        args[t].cores = lps_ptr->cores;
+        args[t].offset_begin = begin;
+        args[t].offset_end = end;
+
+        if ((int)lps_ptr->size <= begin || end <=begin) {
+            args[t].flags = -1;
+        } else if (begin != dct_index) {
+            args[t].dummy_left = lps_ptr->cores[begin-1];
+            args[t].flags = 2 + (lps_ptr->level == 1 ? 1 : 0);
+        } else {
+            args[t].flags = (lps_ptr->level == 1 ? 1 : 0);
+        }
+
+        pthread_create(&threads[t], NULL, dct_worker, &args[t]);
+    }
+
+    for (int t = 0; t < thread_number; t++) {
+        pthread_join(threads[t], NULL);
+    }
+
+    free(threads);
+    free(args);
+    return 0;
+}
+
+/**
+ * @brief Performs multi-iteration parallel Deterministic Coin Tossing (DCT).
+ *
+ * This function executes DCT_ITERATION_COUNT consecutive compression
+ * sweeps over the cores stored in `lps_ptr`, using parallel execution
+ * for each sweep.
+ *
+ * Each iteration reduces redundancy by compressing adjacent core pairs.
+ * The process prepares the core sequence for subsequent parsing stages
+ * in the LCP framework.
+ *
+ * Preconditions:
+ * - At least DCT_ITERATION_COUNT + 1 cores must be available.
+ *
+ * @param lps_ptr       Pointer to the LPS structure.
+ * @param thread_number Number of worker threads per sweep.
+ *
+ * @return 0 on success.
+ * @return -1 if there are not enough cores for DCT.
+ * @return Propagates non-zero errors from run_parallel_sweep().
+ */
+int lcp_dct_parallel(struct lps *lps_ptr, int thread_number) {
+    // at least 2 cores are needed for compression
+    if (lps_ptr->size < DCT_ITERATION_COUNT + 1) {
+        return -1;
+    }
+
+    for (int dct_index = 0; dct_index < DCT_ITERATION_COUNT; dct_index++) {
+        int rc = run_parallel_sweep(lps_ptr, dct_index, thread_number);
+        if (rc != 0) {
+            return rc;
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * @brief Performs a single LPS deepening step using parallel DCT.
+ *
+ * This function advances the LPS structure by one level:
+ *
+ * 1. Executes parallel DCT compression.
+ * 2. Parses the resulting cores using parse3() to identify new cores.
+ * 3. Updates the core array and shrinks it via realloc().
+ * 4. Increments the LPS level.
+ *
+ * If DCT cannot be performed (insufficient cores),
+ * the structure is reset (size = 0) and the level is still incremented.
+ *
+ * @param lps_ptr       Pointer to the LPS structure to update.
+ * @param thread_number Number of worker threads used during DCT.
+ *
+ * @return 1 if deepening produced a valid new level.
+ * @return 0 if no further deepening was possible.
+ */
+int lps_deepen1_parallel(struct lps *lps_ptr, int thread_number) {
+
+    // compress cores
+    if (lcp_dct_parallel(lps_ptr, thread_number) < 0) {
+        lps_ptr->size = 0;
+        lps_ptr->level++;
+        return 0;
+    }
+
+    // find new cores
+    int new_size = parse3(lps_ptr->cores + DCT_ITERATION_COUNT, lps_ptr->cores + lps_ptr->size, lps_ptr->cores);
+    int temp = new_size;
+
+    // remove old cores
+    while(temp < lps_ptr->size) {
+        temp++;
+    }
+    lps_ptr->size = new_size;
+
+    lps_ptr->level++;
+
+    if (lps_ptr->size)
+        lps_ptr->cores = (struct core*)realloc(lps_ptr->cores, lps_ptr->size * sizeof(struct core));
+
+    return 1;
+}
+
+/**
+ * @brief Deepens the LPS structure up to a target LCP level.
+ *
+ * Repeatedly invokes lps_deepen1_parallel() until either:
+ * - The desired `lcp_level` is reached, or
+ * - Further deepening is no longer possible.
+ *
+ * If the current level already satisfies the requested level,
+ * no work is performed.
+ *
+ * @param lps_ptr       Pointer to the LPS structure.
+ * @param lcp_level     Target LCP level to reach.
+ * @param thread_number Number of worker threads used per deepening step.
+ *
+ * @return 1 if processing completed (even if stopped early).
+ * @return 0 if no deepening was required.
+ */
+int lps_deepen_parallel(struct lps *lps_ptr, int lcp_level, int thread_number) {
+
+    if (lcp_level <= lps_ptr->level)
+        return 0;
+
+    while (lps_ptr->level < lcp_level && lps_deepen1_parallel(lps_ptr, thread_number))
+        ;
+
+    return 1;
+}
+
 void print_lps(const struct lps *lps_ptr) {
     printf("Level: %d \n", lps_ptr->level);
     for(int i=0; i<lps_ptr->size; i++) {

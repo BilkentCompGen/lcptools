@@ -49,7 +49,7 @@ void process(std::string &sequence,
 
 		auto start_level = std::chrono::high_resolution_clock::now();
 
-		lps_deepen1(&str);
+		lps_deepen1_parallel(&str, 4);
 
 		auto stop_level = std::chrono::high_resolution_clock::now();
 		total_core_counts[i] += str.size;
