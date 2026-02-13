@@ -176,7 +176,7 @@ Processes the input string and identifies cores that adhere to specific rules:
 
 5. (SSEQ) The subsequent characters are either strictly increasing or decreasing with respect to the lexicographic order, and only the first and last characters are part of either a LMIN, LMAX, or a RINT. 
     
-    Ex: $w = xyza_0 . . . a_nklm$, where $n \geq 1$ and $xyz$ and $klm$ are identified as cores, and $z \lt a_0 \lt \dots \lt a_n \lt k$ or $z \gt a_0 \gt \dots \gt a_n \gt k$.
+    Ex: $w = xyza_1 . . . a_nklm$, where $n \geq 1$ and $xyz$ and $klm$ are identified as cores, and $z \lt a_1 \lt \dots \lt a_n \lt k$ or $z \gt a_1 \gt \dots \gt a_n \gt k$.
 
 ### Deterministic Coin Tossing:
 

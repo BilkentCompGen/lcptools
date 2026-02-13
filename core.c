@@ -33,7 +33,7 @@
  * @param seed An initial seed value for the hash computation.
  * @return The resulting 32-bit hash value.
  */
-uint32_t MurmurHash3_32(const void *key, int len, uint32_t seed) {
+inline uint32_t MurmurHash3_32(const void *key, int len, uint32_t seed) {
     const uint8_t *data = (const uint8_t *)key;
     const int nblocks = len / 4;
 
@@ -53,7 +53,7 @@ uint32_t MurmurHash3_32(const void *key, int len, uint32_t seed) {
         k1 *= c2;
 
         h1 ^= k1;
-        h1 = (h1 << 15) | (h1 >> (32 - 15));
+        h1 = (h1 << 15) | (h1 >> (32 - 15)); // it should be (h1 << 13) | (h1 >> (32 - 13)) but left at it is, let it be a legacy :)
         h1 = h1 * 5 + 0xe6546b64;
     }
 
@@ -148,82 +148,6 @@ void init_core4(struct core *cr, ubit_size bit_size, uint64_t bit_rep, ulabel la
     cr->end = end;
 }
 
-void core_compress(const struct core *left_core, struct core *right_core) {
-    if (left_core->bit_rep & 0x8000000000000000) { // if compressing 1-level cores
-        uint64_t left_core_3 = (left_core->bit_rep) & 3;
-        uint64_t left_core_2 = (left_core->bit_rep >> 2) & 3;
-        uint64_t left_core_middle_count = (left_core->bit_rep & 0x7FFFFFFFFFFFFFFF) >> 6;
-        uint64_t left_core_1 = (left_core->bit_rep >> 4) & 3;
-        
-        uint64_t right_core_3 = (right_core->bit_rep) & 3;
-        uint64_t right_core_2 = (right_core->bit_rep >> 2) & 3;
-        uint64_t right_core_middle_count = (right_core->bit_rep & 0x7FFFFFFFFFFFFFFF) >> 6;
-        uint64_t right_core_1 = (right_core->bit_rep >> 4) & 3;
-        
-        if (left_core_3 != right_core_3) { // if right characters mismatches
-            if ((left_core_3 & 1) != (right_core_3 & 1)) {
-                right_core->bit_rep = (right_core_3 & 1); // 0b00 + r % 2
-            } else {
-                right_core->bit_rep = 2 + ((right_core_3 >> 1) & 1); // 0b10 + r % 2
-            }
-            right_core->bit_size = 2;
-        } 
-        else if (left_core_2 != right_core_2) { // if middle characters mismatches
-            if ((left_core_2 & 1) != (right_core_2 & 1)) {
-                right_core->bit_rep = 4 + (right_core_2 & 1); // 0b100 + r % 2
-            } else {
-                right_core->bit_rep = 6 + ((right_core_2 >> 1) & 1); // 0b110 + r % 2
-            }
-            right_core->bit_size = (64 - __builtin_clzll(right_core->bit_rep));
-        } 
-        else if (left_core_middle_count != right_core_middle_count) { // middle character counts mismatches
-            if (left_core_middle_count < right_core_middle_count) {
-                // compare left_core_1 with right_core_2
-                if ((left_core_1 & 1) != (right_core_2 & 1)) {
-                    right_core->bit_rep = 4 * (left_core_middle_count + 1) + (right_core_2 & 1); // 2 * 2 * (mid + 1) + r % 2
-                } else {
-                    right_core->bit_rep = 2 * (2 * (left_core_middle_count + 1) + 1) + ((right_core_2 >> 1) & 1); // 2 * (2 * (mid + 1) + 1) + r % 2
-                }
-                right_core->bit_size = (64 - __builtin_clzll(right_core->bit_rep));
-            } else {
-                // compare left_core_2 with right_core_1
-                if ((left_core_2 & 1) != (right_core_1 & 1)) {
-                    right_core->bit_rep = 4 * (right_core_middle_count + 1) + (right_core_1 & 1);
-                } else {
-                    right_core->bit_rep = 2 * (2 * (right_core_middle_count + 1) + 1) + ((right_core_1 >> 1) & 1);
-                }
-                right_core->bit_size = (64 - __builtin_clzll(right_core->bit_rep));
-            }
-        } 
-        else if (left_core_1 != right_core_1) { // left characters mismatches
-            if ((left_core_1 & 1) != (right_core_1 & 1)) {
-                right_core->bit_rep = 4 * (left_core_middle_count + 1) + (right_core_1 & 1);
-            } else {
-                right_core->bit_rep = 2 * (2 * (left_core_middle_count + 1) + 1) + ((right_core_1 >> 1) & 1);
-            }
-            right_core->bit_size = (64 - __builtin_clzll(right_core->bit_rep));
-        } 
-        else { // they are same
-            right_core->bit_rep = 2 * right_core->bit_size;
-            right_core->bit_size = (64 - __builtin_clzll(right_core->bit_rep));
-        }
-    } else { // if compressing upper level (>1) cores
-        ubit_size first_differing_index = 64;
-        if (left_core->bit_rep != right_core->bit_rep) {
-            first_differing_index = __builtin_ctzll(left_core->bit_rep ^ right_core->bit_rep); // trailing zero count (0-index)
-        } else {
-            first_differing_index = right_core->bit_size;
-        }
-        first_differing_index = minimum(first_differing_index, minimum(left_core->bit_size, right_core->bit_size));
-        right_core->bit_rep = 2 * first_differing_index + ((right_core->bit_rep >> first_differing_index) & 1);
-        right_core->bit_size = right_core->bit_rep == 0 ? 2 : (64 - __builtin_clzll(right_core->bit_rep));
-        right_core->bit_size = right_core->bit_size < 2 ? 2 : right_core->bit_size;
-    }
-
-    // now, the right core is dependent on the left; hence, its coverage spans towards the left
-    right_core->start = left_core->start;
-}
-
 void print_core(const struct core *cr) {
     if (cr->bit_rep & 0x8000000000000000) { // if printing 1-level cores
         uint64_t middle_count = (0x7FFFFFFFFFFFFFFF & cr->bit_rep) >> 6;
@@ -242,30 +166,4 @@ void print_core(const struct core *cr) {
         }
         printf("%ld", (cr->bit_rep & 1));
     }
-}
-
-// core comparison operator implementation
-
-int core_eq(const struct core *lhs, const struct core *rhs) {
-    return lhs->bit_rep == rhs->bit_rep;
-}
-
-int core_neq(const struct core *lhs, const struct core *rhs) {
-    return lhs->bit_rep != rhs->bit_rep;
-}
-
-int core_gt(const struct core *lhs, const struct core *rhs) {
-    return lhs->bit_rep > rhs->bit_rep;
-}
-
-int core_lt(const struct core *lhs, const struct core *rhs) {
-    return lhs->bit_rep < rhs->bit_rep;
-}
-
-int core_geq(const struct core *lhs, const struct core *rhs) {
-    return lhs->bit_rep >= rhs->bit_rep;
-}
-
-int core_leq(const struct core *lhs, const struct core *rhs) {
-    return lhs->bit_rep <= rhs->bit_rep;
 }

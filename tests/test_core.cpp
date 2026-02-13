@@ -25,16 +25,39 @@ void test_core_constructors() {
 void test_core_compress() {
 
 	struct core core1;
-    init_core4(&core1, 3, 0b101, 10, 0, 3); // 101 in binary
+    init_core4(&core1, 3, (1ull << 63) | 0b01110001, 10, 0, 3); // 101 in binary
 	struct core core2;
-    init_core4(&core2, 3, 0b111, 11, 0, 3); // 111 in binary
-    
-    core_compress(&core2, &core1);
+    init_core4(&core2, 3, (1ull << 63) | 0b10100001, 11, 0, 3); // 111 in binary
+
+    core_compress_level1(&core2, &core1);
 
 	// expected result after compressing 101 and 111 is 10 (binary) => 2 in decimal
-	assert(core1.bit_rep == 0b10 && "Compressed core's label should be 0b10");
-	assert(core1.bit_size == 2 && "Compressed core's label length should be 2");
+	assert(core1.bit_rep == 0b1001 && "Compressed core's label should be 0b1001");
+	assert(core1.bit_size == 4 && "Compressed core's label length should be 4");
 	assert(core1.label == 10 && "Core's label should be 10");
+
+	struct core core3;
+    init_core4(&core3, 3, 0b101, 10, 0, 3); // 101 in binary
+	struct core core4;
+    init_core4(&core4, 3, 0b111, 11, 0, 3); // 111 in binary
+
+    core_compress_upper(&core4, &core3);
+
+	// expected result after compressing 101 and 111 is 10 (binary) => 2 in decimal
+	assert(core3.bit_rep == 0b10 && "Compressed core's label should be 0b10");
+	assert(core3.bit_size == 2 && "Compressed core's label length should be 2");
+
+	struct core core5;
+    init_core4(&core5, 3, (1ull << 63) | 0b11100001, 10, 0, 3); // 101 in binary
+	struct core core6;
+    init_core4(&core6, 3, (1ull << 63) | 0b10110001, 11, 0, 3); // 111 in binary
+
+    core_compress_level1(&core6, &core5);
+
+	// expected result after compressing 101 and 111 is 10 (binary) => 2 in decimal
+	assert(core5.bit_rep == 0b1100 && "Compressed core's label should be 0b1110");
+	assert(core5.bit_size == 4 && "Compressed core's label length should be 4");
+
 
 	log("...  test_core_compress passed!");
 }

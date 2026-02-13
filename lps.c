@@ -423,11 +423,21 @@ int lcp_dct(struct lps *lps_ptr) {
         return -1;
     }
 
-    for (uint64_t dct_index = 0; dct_index < DCT_ITERATION_COUNT; dct_index++) {
-        struct core *it_left = lps_ptr->cores + lps_ptr->size - 2, *it_right = lps_ptr->cores + lps_ptr->size - 1;
+    if (lps_ptr->level == 1) {
+        for (uint64_t dct_index = 0; dct_index < DCT_ITERATION_COUNT; dct_index++) {
+            struct core *it_left = lps_ptr->cores + lps_ptr->size - 2, *it_right = lps_ptr->cores + lps_ptr->size - 1;
 
-        for (; lps_ptr->cores + dct_index <= it_left; it_left--, it_right--) {
-            core_compress(it_left, it_right);
+            for (; lps_ptr->cores + dct_index <= it_left; it_left--, it_right--) {
+                core_compress_level1(it_left, it_right);
+            }
+        }
+    } else {
+        for (uint64_t dct_index = 0; dct_index < DCT_ITERATION_COUNT; dct_index++) {
+            struct core *it_left = lps_ptr->cores + lps_ptr->size - 2, *it_right = lps_ptr->cores + lps_ptr->size - 1;
+
+            for (; lps_ptr->cores + dct_index <= it_left; it_left--, it_right--) {
+                core_compress_upper(it_left, it_right);
+            }
         }
     }
 
