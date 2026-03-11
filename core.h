@@ -53,13 +53,23 @@ extern "C" {
 typedef uint32_t ubit_size;
 typedef uint32_t ulabel;
 
+#ifdef LARGE_GENOME
 struct core {
     ubit_size bit_size;
-    uint64_t bit_rep;
     ulabel label;
+    uint64_t bit_rep;
     uint64_t start;
     uint64_t end;
 };
+#else 
+struct core {
+    ubit_size bit_size;
+    ulabel label;
+    uint64_t bit_rep;
+    uint32_t start;
+    uint32_t end;
+};
+#endif
 
 /**
  * @brief Initializes a core structure with the provided string data and index range.
@@ -117,19 +127,6 @@ void init_core3(struct core *cr, struct core *begin, uint64_t distance);
  * @param end End index of the substring or sequence represented by the core.
  */
 void init_core4(struct core *cr, ubit_size bit_size, uint64_t bit_rep, ulabel label, uint64_t start, uint64_t end);
-
-/**
- * @brief Compresses the right `core` object by comparing it with
- * left `core` object.
- *
- * This function compresses the core's bit sequence by identifying
- * common patterns between the right `core` object and left `core` object,
- * and reduces the size of the sequence accordingly.
- *
- * @param left_core The `core` object to compare against for compression.
- * @param right_core The `core` object that will be compressed.
- */
-void core_compress(const struct core *left_core, struct core *right_core);
 
 /**
  * @brief Output the bit representation of a `core` object.
