@@ -29,7 +29,7 @@ LIB_DIR = $(ABS_PREFIX)/lib
 
 .PHONY: all clean install uninstall test
 
-install: clean $(STATIC) $(DYNAMIC) lcptools
+install: clean $(STATIC) $(DYNAMIC)
 	mkdir -p $(INCLUDE_DIR)
 	rm -f *.o
 	cp $(HDR) $(INCLUDE_DIR)
