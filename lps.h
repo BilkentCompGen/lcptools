@@ -201,20 +201,59 @@ int parse3(struct core *begin, struct core *end, struct core *cores);
 int64_t lps_memsize(const struct lps *lps_ptr);
 
 /**
- * @brief Deepens the compression level of the LCP structure. This method compresses the
- * existing cores and finds new cores.
+ * @brief Deepens the compression level of the LPS structure by one level using a custom DCT iteration count.
  *
- * @param lps_ptr The `lps` object that will be parsed over.
- * @return 1 if successful in deepening the structure, 0 otherwise.
+ * This function performs DCT compression on the existing cores, parses the remaining cores to find
+ * the cores of the next level, removes obsolete cores, updates the size of the LPS structure, and
+ * increments the current compression level.
+ *
+ * The `dct_iteration_count` parameter controls how many DCT iterations are applied before parsing
+ * the remaining cores into the next level.
+ *
+ * @param lps_ptr The `lps` object to deepen.
+ * @param dct_iteration_count The number of DCT iterations to perform.
+ * @return 1 if the structure was successfully deepened, 0 otherwise.
+ */
+int lps_deepen1_dct_iters(struct lps *lps_ptr, int dct_iteration_count);
+
+/**
+ * @brief Deepens the compression level of the LPS structure by one level using the default DCT iteration count.
+ *
+ * This function compresses the existing cores and finds new cores for the next compression level
+ * using `DCT_ITERATION_COUNT`. It is a convenience wrapper around `lps_deepen1_dct_iters`.
+ *
+ * @param lps_ptr The `lps` object to deepen.
+ * @return 1 if the structure was successfully deepened, 0 otherwise.
  */
 int lps_deepen1(struct lps *lps_ptr);
 
 /**
- * @brief Deepens the compression level of the LCP structure to a specific level.
+ * @brief Deepens the compression level of the LPS structure to a specific level using a custom DCT iteration count.
  *
- * @param lps_ptr The `lps` object that will be parsed over.
+ * This function repeatedly deepens the LPS structure one level at a time until the requested
+ * `lcp_level` is reached or no further deepening is possible. Each deepening step performs DCT
+ * compression using the provided `dct_iteration_count`, then parses the remaining cores into the
+ * next compression level.
+ *
+ * If the requested level is less than or equal to the current level, no deepening is performed.
+ *
+ * @param lps_ptr The `lps` object to deepen.
  * @param lcp_level The target compression level to deepen to.
- * @return 1 if deepening was successful, 0 otherwise.
+ * @param dct_iteration_count The number of DCT iterations to perform at each level.
+ * @return 1 if deepening was performed or attempted, 0 if the target level is not greater than the current level.
+ */
+int lps_deepen_dct_iters(struct lps *lps_ptr, int lcp_level, int dct_iteration_count);
+
+/**
+ * @brief Deepens the compression level of the LPS structure to a specific level using the default DCT iteration count.
+ *
+ * This function repeatedly deepens the LPS structure one level at a time until the requested
+ * `lcp_level` is reached or no further deepening is possible. It uses `DCT_ITERATION_COUNT` for
+ * each DCT compression step and is a convenience wrapper around `lps_deepen_dct_iters`.
+ *
+ * @param lps_ptr The `lps` object to deepen.
+ * @param lcp_level The target compression level to deepen to.
+ * @return 1 if deepening was performed or attempted, 0 if the target level is not greater than the current level.
  */
 int lps_deepen(struct lps *lps_ptr, int lcp_level);
 

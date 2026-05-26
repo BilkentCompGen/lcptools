@@ -446,27 +446,30 @@ int64_t lps_memsize(const struct lps *lps_ptr) {
     return total;
 }
 
-/**
- * @brief Performs Deterministic Coin Tossing (DCT) compression on binary sequences.
- *
- * This function is a central part of the LCP (Locally Consisted Parsing) algorithm. It identifies differences
- * between consecutive binary strings, compressing the information by focusing on the position and value of
- * the first divergent bit from the right-end of the strings. This difference is used to generate a compact
- * 'core' that encapsulates the unique elements of each sequence in a smaller binary form.
- *
- * This compression significantly reduces redundant information, making further analysis of the sequences
- * within the LCP framework more efficient and manageable.
- *
- * @return 0 if dct is performed, -1 if no enough cores are available for dct.
- */
-int lcp_dct(struct lps *lps_ptr) {
 
+/**
+ * @brief Performs Deterministic Coin Tossing (DCT) compression for a given number of iterations.
+ *
+ * This function applies DCT compression to the cores stored in the LPS structure. During each
+ * iteration, consecutive cores are compared and compressed from right to left. The compression
+ * method used depends on the current LPS level: level 1 uses level-1 core compression, while
+ * higher levels use upper-level core compression.
+ *
+ * The number of DCT iterations controls how many leading cores are consumed before the remaining
+ * cores are parsed into the next compression level.
+ *
+ * @param lps_ptr The `lps` object whose cores will be compressed.
+ * @param dct_iteration_count The number of DCT iterations to perform.
+ * @return 0 if DCT compression was performed, -1 if there are not enough cores.
+ */
+int lcp_dct_iters(struct lps *lps_ptr, int dct_iteration_count) {
+    
     // at least 2 cores are needed for compression
-    if (lps_ptr->size < DCT_ITERATION_COUNT + 1) {
+    if (lps_ptr->size < dct_iteration_count + 1) {
         return -1;
     }
 
-    for (uint64_t dct_index = 0; dct_index < DCT_ITERATION_COUNT; dct_index++) {
+    for (int dct_index = 0; dct_index < dct_iteration_count; dct_index++) {
         struct core *it_left = lps_ptr->cores + lps_ptr->size - 2, *it_right = lps_ptr->cores + lps_ptr->size - 1;
 
         for (; lps_ptr->cores + dct_index <= it_left; it_left--, it_right--) {
@@ -477,25 +480,34 @@ int lcp_dct(struct lps *lps_ptr) {
     return 0;
 }
 
-int lps_deepen1(struct lps *lps_ptr) {
+/**
+ * @brief Performs Deterministic Coin Tossing (DCT) compression using the default iteration count.
+ *
+ * This function applies DCT compression to the cores stored in the LPS structure using
+ * `DCT_ITERATION_COUNT`. It is a convenience wrapper around `lcp_dct_iters`.
+ *
+ * @param lps_ptr The `lps` object whose cores will be compressed.
+ * @return 0 if DCT compression was performed, -1 if there are not enough cores.
+ */
+int lcp_dct(struct lps *lps_ptr) {
+    return lcp_dct_iters(lps_ptr, DCT_ITERATION_COUNT);
+}
+
+int lps_deepen1_dct_iters(struct lps *lps_ptr, int dct_iteration_count) {
 
     // compress cores
-    if (lcp_dct(lps_ptr) < 0) {
-        for(int i=0; i<lps_ptr->size; i++) {
-            free(lps_ptr->cores[i].bit_rep);
-        }
+    if (lcp_dct_iters(lps_ptr, dct_iteration_count) < 0) {
         lps_ptr->size = 0;
         lps_ptr->level++;
         return 0;
     }
 
     // find new cores
-    int new_size = parse3(lps_ptr->cores + DCT_ITERATION_COUNT, lps_ptr->cores + lps_ptr->size, lps_ptr->cores);
+    int new_size = parse3(lps_ptr->cores + dct_iteration_count, lps_ptr->cores + lps_ptr->size, lps_ptr->cores);
     int temp = new_size;
 
     // remove old cores
     while(temp < lps_ptr->size) {
-        free(lps_ptr->cores[temp].bit_rep);
         temp++;
     }
     lps_ptr->size = new_size;
@@ -508,15 +520,22 @@ int lps_deepen1(struct lps *lps_ptr) {
     return 1;
 }
 
-int lps_deepen(struct lps *lps_ptr, int lcp_level) {
+int lps_deepen1(struct lps *lps_ptr) {
+    return lps_deepen1_dct_iters(lps_ptr, DCT_ITERATION_COUNT);
+}
 
+int lps_deepen_dct_iters(struct lps *lps_ptr, int lcp_level, int dct_iteration_count) {
     if (lcp_level <= lps_ptr->level)
         return 0;
 
-    while (lps_ptr->level < lcp_level && lps_deepen1(lps_ptr))
+    while (lps_ptr->level < lcp_level && lps_deepen1_dct_iters(lps_ptr, dct_iteration_count))
         ;
 
     return 1;
+}
+
+int lps_deepen(struct lps *lps_ptr, int lcp_level) {
+    return lps_deepen_dct_iters(lps_ptr, lcp_level, DCT_ITERATION_COUNT);
 }
 
 void print_lps(const struct lps *lps_ptr) {
