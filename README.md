@@ -7,7 +7,8 @@ This repository contains an implementation of the Locally Consistent Parsing (LC
 
 For additional details about the data structure, please refer to [this document](https://github.com/BilkentCompGen/lcptools/blob/main/docs.md).
 
-If you use LCP (or *lcptools*) in your work, please consider citing our [arXiv paper](https://doi.org/10.48550/arXiv.2511.12205).
+If you use LCP (or *lcptools*) in your work, please cite:
+- LCPan: efficient variation graph construction using locally consistent parsing. Akmuhammet Ashyralyyev, Zülal Bingöl, Begüm Filiz Öz, Salem Malikic, Uzi Vishkin, S. Cenk Sahinalp, Can Alkan. [Genome Biol (2026)](https://doi.org/10.1186/s13059-026-04088-w).
 
 ## Features
 
@@ -27,6 +28,7 @@ To install lcptools system-wide, you need sudo privileges. This will install the
     ```sh
     git clone https://github.com/BilkentCompGen/lcptools.git
     cd lcptools
+    git checkout biolcp
 
     # Install the library
     sudo make install
@@ -45,6 +47,7 @@ To install lcptools in your home directory (or another custom directory), you do
     ```sh
     git clone https://github.com/BilkentCompGen/lcptools.git
     cd lcptools
+    git checkout biolcp
 
     # Install the library to a custom directory (e.g., `~/.local`):**
     make install PREFIX=$(HOME)/.local
