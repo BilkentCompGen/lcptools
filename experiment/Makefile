@@ -58,6 +58,14 @@ GXX := g++
 CXXFLAGS = -std=c++11 -O3 -Wall -Wextra -Wpedantic
 TIME := /usr/bin/time -v
 
+ifdef LABEL64
+CXXFLAGS += -DLABEL64
+endif
+
+ifdef LARGE_GENOME
+CXXFLAGS += -DLARGE_GENOME
+endif
+
 .PHONY: all
 
 all: mkdir_bin mkdir_out mkdir_branch

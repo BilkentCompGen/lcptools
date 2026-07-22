@@ -22,12 +22,47 @@
 #include "core.h"
 
 
-// Specialization of MurmurHash3_32(data, 16, 42) for four 32-bit words. Bit-identical to the general routine.
+#ifdef LABEL64
+
+static inline uint64_t rotl64(uint64_t x, int r) {
+    return (x << r) | (x >> (64 - r));
+}
+
+static inline uint64_t fmix64(uint64_t k) {
+    k ^= k >> 33; k *= 0xff51afd7ed558ccdULL;
+    k ^= k >> 33; k *= 0xc4ceb9fe1a85ec53ULL;
+    k ^= k >> 33;
+    return k;
+}
+
+static inline ulabel hash4_label(ulabel w0, ulabel w1, ulabel w2, ulabel w3) {
+    const uint64_t c1 = 0x87c37b91114253d5ULL, c2 = 0x4cf5ad432745937fULL;
+    uint64_t h1 = 42u, h2 = 42u, k1, k2;
+
+    /* block 0 (w0, w1) */
+    k1 = w0; k2 = w1;
+    k1 *= c1; k1 = rotl64(k1,31); k1 *= c2; h1 ^= k1; h1 = rotl64(h1,27); h1 += h2; h1 = h1*5 + 0x52dce729;
+    k2 *= c2; k2 = rotl64(k2,33); k2 *= c1; h2 ^= k2; h2 = rotl64(h2,31); h2 += h1; h2 = h2*5 + 0x38495ab5;
+
+    /* block 1 (w2, w3) */
+    k1 = w2; k2 = w3;
+    k1 *= c1; k1 = rotl64(k1,31); k1 *= c2; h1 ^= k1; h1 = rotl64(h1,27); h1 += h2; h1 = h1*5 + 0x52dce729;
+    k2 *= c2; k2 = rotl64(k2,33); k2 *= c1; h2 ^= k2; h2 = rotl64(h2,31); h2 += h1; h2 = h2*5 + 0x38495ab5;
+
+    h1 ^= 32u; h2 ^= 32u;
+    h1 += h2; h2 += h1;
+    h1 = fmix64(h1); h2 = fmix64(h2);
+    h1 += h2; h2 += h1;
+    return h1;
+}
+
+#else
+
 static inline uint32_t rotl32(uint32_t x, int r) {
     return (x << r) | (x >> (32 - r));
 }
 
-static inline uint32_t hash4_u32(uint32_t w0, uint32_t w1, uint32_t w2, uint32_t w3) {
+static inline ulabel hash4_label(ulabel w0, ulabel w1, ulabel w2, ulabel w3) {
     const uint32_t c1 = 0xcc9e2d51, c2 = 0x1b873593;
     uint32_t h1 = 42u, k1;
 
@@ -40,6 +75,8 @@ static inline uint32_t hash4_u32(uint32_t w0, uint32_t w1, uint32_t w2, uint32_t
     h1 ^= h1 >> 16; h1 *= 0x85ebca6b; h1 ^= h1 >> 13; h1 *= 0xc2b2ae35; h1 ^= h1 >> 16;
     return h1;
 }
+
+#endif
 
 void init_core1(struct core *cr, const char *begin, uint64_t distance, uint64_t start_index, uint64_t end_index) {
     cr->start = start_index;
@@ -83,7 +120,7 @@ void init_core3(struct core *cr, struct core *begin, uint64_t distance) {
 
     cr->bit_rep = 0x7FFFFFFFFFFFFFFF & cr->bit_rep;
     cr->bit_size = minimum(cr->bit_size, 63);
-    cr->label = hash4_u32(begin->label, (begin + distance - 2)->label, (begin + distance - 1)->label, (uint32_t)(distance - 2));
+    cr->label = hash4_label(begin->label, (begin + distance - 2)->label, (begin + distance - 1)->label, (ulabel)(distance - 2));
 }
 
 void init_core4(struct core *cr, ubit_size bit_size, uint64_t bit_rep, ulabel label, uint64_t start, uint64_t end) {

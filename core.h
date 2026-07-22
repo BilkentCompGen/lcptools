@@ -53,7 +53,12 @@ extern "C" {
 #define minimum(a, b) ((a) < (b) ? (a) : (b))
 
 typedef uint32_t ubit_size;
+
+#ifdef LABEL64
+typedef uint64_t ulabel;
+#else
 typedef uint32_t ulabel;
+#endif
 
 #ifdef LARGE_GENOME
 struct core {

@@ -3,6 +3,14 @@ CXX = gcc
 CXXFLAGS = -O3 -Wall -Wextra -Wpedantic
 CXXEXTRA = -fPIC
 
+ifdef LABEL64
+CXXFLAGS += -DLABEL64
+endif
+
+ifdef LARGE_GENOME
+CXXFLAGS += -DLARGE_GENOME
+endif
+
 # archiver and flags
 AR = ar
 ARFLAGS = rcs
