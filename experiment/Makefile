@@ -66,6 +66,10 @@ ifdef LARGE_GENOME
 CXXFLAGS += -DLARGE_GENOME
 endif
 
+ifdef PARSE_ONLY
+CXXFLAGS += -DPARSE_ONLY
+endif
+
 .PHONY: all
 
 all: mkdir_bin mkdir_out mkdir_branch

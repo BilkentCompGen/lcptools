@@ -11,6 +11,10 @@ ifdef LARGE_GENOME
 CXXFLAGS += -DLARGE_GENOME
 endif
 
+ifdef PARSE_ONLY
+CXXFLAGS += -DPARSE_ONLY
+endif
+
 # archiver and flags
 AR = ar
 ARFLAGS = rcs

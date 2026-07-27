@@ -62,19 +62,23 @@ typedef uint32_t ulabel;
 
 #ifdef LARGE_GENOME
 struct core {
-    ubit_size bit_size;
-    ulabel label;
-    uint64_t bit_rep;
     uint64_t start;
     uint64_t end;
+    uint64_t bit_rep;
+#ifndef PARSE_ONLY
+    ulabel label;
+#endif
+    ubit_size bit_size;
 };
 #else 
 struct core {
-    ubit_size bit_size;
-    ulabel label;
-    uint64_t bit_rep;
     uint32_t start;
     uint32_t end;
+    uint64_t bit_rep;
+#ifndef PARSE_ONLY
+    ulabel label;
+#endif
+    ubit_size bit_size;
 };
 #endif
 

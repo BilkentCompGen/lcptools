@@ -24,6 +24,8 @@
 
 #ifdef LABEL64
 
+#ifndef PARSE_ONLY
+
 static inline uint64_t rotl64(uint64_t x, int r) {
     return (x << r) | (x >> (64 - r));
 }
@@ -56,7 +58,11 @@ static inline ulabel hash4_label(ulabel w0, ulabel w1, ulabel w2, ulabel w3) {
     return h1;
 }
 
+#endif
+
 #else
+
+#ifndef PARSE_ONLY
 
 static inline uint32_t rotl32(uint32_t x, int r) {
     return (x << r) | (x >> (32 - r));
@@ -78,27 +84,47 @@ static inline ulabel hash4_label(ulabel w0, ulabel w1, ulabel w2, ulabel w3) {
 
 #endif
 
+#endif
+
 void init_core1(struct core *cr, const char *begin, uint64_t distance, uint64_t start_index, uint64_t end_index) {
     cr->start = start_index;
     cr->end = end_index;
+#ifndef PARSE_ONLY
     cr->label = 0;
     cr->label |= ((distance-2) << 6);
     cr->label |= (alphabet[(int)(*begin)] << 4);
     cr->label |= (alphabet[(int)(*(begin+distance-2))] << 2);
     cr->label |= (alphabet[(int)(*(begin+distance-1))]);
     cr->bit_rep = 0x8000000000000000 | cr->label;
+#else
+    ulabel label = 0;
+    label |= ((distance-2) << 6);
+    label |= (alphabet[(int)(*begin)] << 4);
+    label |= (alphabet[(int)(*(begin+distance-2))] << 2);
+    label |= (alphabet[(int)(*(begin+distance-1))]);
+    cr->bit_rep = 0x8000000000000000 | label;
+#endif
     cr->bit_size = 2 * distance;
 }
 
 void init_core2(struct core *cr, const char *begin, uint64_t distance, uint64_t start_index, uint64_t end_index) {
     cr->start = start_index;
     cr->end = end_index;
+#ifndef PARSE_ONLY
     cr->label = 0;
     cr->label |= ((distance-2) << 6);
     cr->label |= (rc_alphabet[(int)(*(begin))] << 4);
     cr->label |= (rc_alphabet[(int)(*(begin-distance+2))] << 2);
     cr->label |= (rc_alphabet[(int)(*(begin-distance+1))]);
     cr->bit_rep = 0x8000000000000000 | cr->label;
+#else
+    ulabel label = 0;
+    label |= ((distance-2) << 6);
+    label |= (rc_alphabet[(int)(*(begin))] << 4);
+    label |= (rc_alphabet[(int)(*(begin-distance+2))] << 2);
+    label |= (rc_alphabet[(int)(*(begin-distance+1))]);
+    cr->bit_rep = 0x8000000000000000 | cr->label;
+#endif
     cr->bit_size = 2 * distance;
 }
 
@@ -120,13 +146,19 @@ void init_core3(struct core *cr, struct core *begin, uint64_t distance) {
 
     cr->bit_rep = 0x7FFFFFFFFFFFFFFF & cr->bit_rep;
     cr->bit_size = minimum(cr->bit_size, 63);
+#ifndef PARSE_ONLY
     cr->label = hash4_label(begin->label, (begin + distance - 2)->label, (begin + distance - 1)->label, (ulabel)(distance - 2));
+#endif
 }
 
 void init_core4(struct core *cr, ubit_size bit_size, uint64_t bit_rep, ulabel label, uint64_t start, uint64_t end) {
     cr->bit_size = bit_size;
     cr->bit_rep = bit_rep;
+#ifndef PARSE_ONLY
     cr->label = label;
+#else
+    (void)label;
+#endif
     cr->start = start;
     cr->end = end;
 }
