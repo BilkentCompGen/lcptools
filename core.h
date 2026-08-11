@@ -17,19 +17,15 @@
  * - Calculating memory usage of the constructed core structure.
  *
  * Dependencies:
- * - Requires constant.h and encoding.h for auxiliary data structures and
- * utilities.
+ * - Requires encoding.h and config.h for auxiliary data structures and utilities.
  *
- * @see constant.h
  * @see encoding.h
- *
- * @namespace lcp
+ * 
  * @struct core
  *
- *
  * @author Akmuhammet Ashyralyyev
- * @version 1.0
- * @date 2024-09-14
+ * @version 1.1
+ * @date 2026-08-11
  *
  */
 
@@ -41,7 +37,7 @@ extern "C" {
 #endif
 
 #include "encoding.h"
-
+#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h> 
@@ -54,33 +50,31 @@ extern "C" {
 
 typedef uint32_t ubit_size;
 
-#ifdef LABEL64
-typedef uint64_t ulabel;
+#if LCP_LABEL_BITS == 64
+typedef uint64_t lcp_label;
+#elif LCP_LABEL_BITS == 32
+typedef uint32_t lcp_label;
 #else
-typedef uint32_t ulabel;
+#error "LCP_LABEL_BITS must be 32 or 64; regenerate config.h"
 #endif
 
-#ifdef LARGE_GENOME
+#if LCP_POS_BITS == 64
+typedef uint64_t lcp_pos;
+#elif LCP_POS_BITS == 32
+typedef uint32_t lcp_pos;
+#else
+#error "LCP_POS_BITS must be 32 or 64; regenerate config.h"
+#endif
+
 struct core {
-    uint64_t start;
-    uint64_t end;
-    uint64_t bit_rep;
-#ifndef PARSE_ONLY
-    ulabel label;
+    lcp_pos start;      // start offset of lcp core within string
+    lcp_pos end;        // end offset of lcp core within string
+    uint64_t bit_rep;   // constrainted bit representation of lcp core alphabet
+#if LCP_COMPUTE_LABEL == 1
+    lcp_label label;    // if od the core, computed from either base alphabet or sub-labels
 #endif
-    ubit_size bit_size;
+    ubit_size bit_size; // number of bits stored in bit_rep
 };
-#else 
-struct core {
-    uint32_t start;
-    uint32_t end;
-    uint64_t bit_rep;
-#ifndef PARSE_ONLY
-    ulabel label;
-#endif
-    ubit_size bit_size;
-};
-#endif
 
 /**
  * @brief Initializes a core structure with the provided string data and index range.
@@ -94,7 +88,7 @@ struct core {
  * @param start_index Start index of the substring within the data.
  * @param end_index End index of the substring within the data.
  */
-void init_core1(struct core *cr, const char *begin, uint64_t distance, uint64_t start_index, uint64_t end_index);
+void init_core1(struct core *cr, const char *begin, lcp_pos distance, lcp_pos start_index, lcp_pos end_index);
 
 /**
  * @brief Initializes a core structure with the provided string data and index range.
@@ -108,7 +102,7 @@ void init_core1(struct core *cr, const char *begin, uint64_t distance, uint64_t 
  * @param start_index Start index of the substring within the data.
  * @param end_index End index of the substring within the data.
  */
-void init_core2(struct core *cr, const char *begin, uint64_t distance, uint64_t start_index, uint64_t end_index);
+void init_core2(struct core *cr, const char *begin, lcp_pos distance, lcp_pos start_index, lcp_pos end_index);
 
 /**
  * @brief Initializes a core structure by combining data from other core structures.
@@ -121,7 +115,7 @@ void init_core2(struct core *cr, const char *begin, uint64_t distance, uint64_t 
  * @param begin Pointer to the start of the sequence of core structures.
  * @param distance Number of core structures to process in the sequence.
  */
-void init_core3(struct core *cr, struct core *begin, uint64_t distance);
+void init_core3(struct core *cr, struct core *begin, lcp_pos distance);
 
 /**
  * @brief Directly initializes a core structure with precomputed representation and metadata.
@@ -137,7 +131,7 @@ void init_core3(struct core *cr, struct core *begin, uint64_t distance);
  * @param start Start index of the substring or sequence represented by the core.
  * @param end End index of the substring or sequence represented by the core.
  */
-void init_core4(struct core *cr, ubit_size bit_size, uint64_t bit_rep, ulabel label, uint64_t start, uint64_t end);
+void init_core4(struct core *cr, ubit_size bit_size, uint64_t bit_rep, lcp_label label, lcp_pos start, lcp_pos end);
 
 /**
  * @brief Output the bit representation of a `core` object.

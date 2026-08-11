@@ -24,9 +24,9 @@ struct lps {
 struct core {
     ubit_size bit_size;  // Size of the bit representation
     uint64_t bit_rep;    // Pointer to the bit representation
-    ulabel label;        // Unique label for the core
-    uint64_t start;      // Start index in the string
-    uint64_t end;        // End index in the string
+    lcp_label label;     // Unique label for the core
+    lcp_pos start;       // Start index in the string
+    lcp_pos end;         // End index in the string
 };
 ```
 

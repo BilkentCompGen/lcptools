@@ -19,31 +19,29 @@
  * - Calculating memory usage of the constructed LCP structure.
  *
  * Dependencies:
- * - Requires core.h, encoding.h, hash.h, and constant.h for auxiliary data structures and utilities.
+ * - Requires core.h, encoding.h, and config.h, for auxiliary data structures and utilities.
  *
  * Example usage:
  * @code
- *   std::string sequence = "AGCTAGCTAG";
- *   lcp::lps parser(sequence);
- *   parser.deepen();
- *   parser.write("output.lps");
+ *   const char *sequence = "AGCTAGCTAG";
+ *   struct lps lps_obj;
+ *   init_lps(&lps_obj, sequence, 10);
+ *   lps_deepen1(&lps_obj);
+ *   free_lps(&lps_obj);
  * @endcode
  *
  * @see core.h
  * @see encoding.h
- * @see hash.h
- * @see constant.h
+ * @see config.h
  *
- * @namespace lcp
  * @struct lps
  *
- * @note Destructor handles clean-up of allocated memory for cores.
- *
  * @author Akmuhammet Ashyralyyev
- * @version 1.0
- * @date 2024-09-14
+ * @version 1.1
+ * @date 2026-08-11
  *
  */
+
 
 #ifndef LPS_H
 #define LPS_H
@@ -145,56 +143,6 @@ void free_lps(struct lps *lps_ptr);
  *       for writing. If the file cannot be written to, the function behavior is undefined.
  */
 void write_lps(struct lps *lps_ptr, FILE *out);
-
-/**
- * @brief Parses a sequence to extract Locally Consisted Parsing (LCP) cores and stores them in a 
- * array of cores.
- *
- * This function iterates over a sequence defined by iterators `begin` and `end` and identifies key
- * segments, called "cores," that represent the (LCP) regions. By analyzing
- * character relationships in the sequence (such as equality or relative order), it builds and stores
- * these cores for further processing in the LCP framework.
- *
- * @param begin Iterator pointing to the beginning of the sequence to parse.
- * @param end Iterator pointing to the end of the sequence to parse.
- * @param cores Pointer to a array where the identified LCP cores will be stored.
- * @param offset The distance measure where the indecies of the core will be shifted by.
- * @return Size of the cores identified in the given string.
- */
-int parse1(const char *begin, const char *end, struct core *cores, uint64_t offset);
-
-/**
- * @brief Parses a sequence to extract Locally Consisted Parsing (LCP) cores and stores them in a 
- * array of cores using complement alphabet.
- *
- * This function iterates over a sequence defined by iterators `begin` and `end` and identifies key
- * segments, called "cores," that represent the (LCP) regions. By analyzing
- * character relationships in the sequence (such as equality or relative order based on complement), 
- * it builds and stores these cores for further processing in the LCP framework.
- *
- * @param begin Iterator pointing to the beginning of the sequence to parse.
- * @param end Iterator pointing to the end of the sequence to parse.
- * @param cores Pointer to a array where the identified LCP cores will be stored.
- * @param offset The distance measure where the indecies of the core will be shifted by.
- * @return Size of the cores identified in the given string.
- */
-int parse2(const char *begin, const char *end, struct core *cores, uint64_t offset);
-
-/**
- * @brief Parses a array of cores to extract Locally Consisted Parsing (LCP) cores and stores them in a 
- * array of cores.
- *
- * This function iterates over a array of `core` structures defined by iterators `begin` and `end` and 
- * identifies key segments, called "cores," that represent the (LCP) regions. By analyzing
- * `core` structure relationships in the array (such as equality or relative order), it builds and stores
- * these cores for further processing in the LCP framework.
- *
- * @param begin Iterator pointing to the beginning of the `core` array to parse.
- * @param end Iterator pointing to the end of the `core` array to parse.
- * @param cores Pointer to a array where the identified LCP cores will be stored.
- * @return Size of the cores identified in the given string.
- */
-int parse3(struct core *begin, struct core *end, struct core *cores);
 
 /**
  * @brief Calculates and returns the memory size used by the `lps` structure.

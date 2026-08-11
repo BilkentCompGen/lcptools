@@ -3,16 +3,22 @@ CXX = gcc
 CXXFLAGS = -O3 -Wall -Wextra -Wpedantic
 CXXEXTRA = -fPIC
 
-ifdef LABEL64
-CXXFLAGS += -DLABEL64
+# compile-time configuration
+LABEL ?= 32
+POS ?= 32
+DCT ?= 1
+COMPUTE_LABEL ?= 1
+
+ifeq ($(filter 32 64,$(LABEL)),)
+$(error LABEL must be 32 or 64, got '$(LABEL)')
 endif
 
-ifdef LARGE_GENOME
-CXXFLAGS += -DLARGE_GENOME
+ifeq ($(filter 32 64,$(POS)),)
+$(error POS must be 32 or 64, got '$(POS)')
 endif
 
-ifdef PARSE_ONLY
-CXXFLAGS += -DPARSE_ONLY
+ifeq ($(filter 0 1,$(COMPUTE_LABEL)),)
+$(error COMPUTE_LABEL must be 0 or 1, got '$(COMPUTE_LABEL)')
 endif
 
 # archiver and flags
@@ -21,7 +27,9 @@ ARFLAGS = rcs
 
 # variables
 SRC = encoding.c core.c lps.c
-HDR = $(SRC:.c=.h)
+CONFIG_HDR = config.h
+CONFIG_IN = $(CONFIG_HDR).in
+HDR = $(SRC:.c=.h) $(CONFIG_HDR)
 OBJ_STATIC = $(SRC:.c=_s.o)
 OBJ_DYNAMIC = $(SRC:.c=_d.o)
 
@@ -42,47 +50,54 @@ LIB_DIR = $(ABS_PREFIX)/lib
 .PHONY: all clean install uninstall test
 
 install: clean $(STATIC) $(DYNAMIC)
-	mkdir -p $(INCLUDE_DIR)
-	rm -f *.o
-	cp $(HDR) $(INCLUDE_DIR)
+	@mkdir -p $(INCLUDE_DIR)
+	@cp $(HDR) $(INCLUDE_DIR)
+	@rm -f *.o $(CONFIG_HDR)
 	@echo "[[WARNING]]! Please make sure that $(LIB_DIR) included in LD_LIBRARY_PATH if you want to include dynamic library";
 
 uninstall:
-	rm -f lcptools;
-	rm -f $(LIB_DIR)/$(STATIC)
-	rm -f $(LIB_DIR)/$(DYNAMIC)
+	@rm -f $(LIB_DIR)/$(STATIC)
+	@rm -f $(LIB_DIR)/$(DYNAMIC)
 	@for hdr in $(HDR); do \
 		echo "Removing $(INCLUDE_DIR)/$$hdr;"; \
 		rm -f $(INCLUDE_DIR)/$$hdr; \
 	done
 
 clean:
-	rm -f $(TEST_DIR)/*.o 
-	@echo "rm $(LIB_DIR)/$(STATIC)";
+	@rm -f $(TEST_DIR)/*.o 
 	@if [ -f "$(LIB_DIR)/$(STATIC)" ]; then \
+		echo "rm $(LIB_DIR)/$(STATIC)"; \
 		rm -f $(LIB_DIR)/$(STATIC) || \
 			{ \
 				echo "Couldn't remove $(LIB_DIR)/$(STATIC)"; \
 				exit 1; \
 			}; \
 	fi
-	@echo "rm $(LIB_DIR)/$(DYNAMIC)";
 	@if [ -f "$(LIB_DIR)/$(DYNAMIC)" ]; then \
+		echo "rm $(LIB_DIR)/$(DYNAMIC)"; \
 		rm -f $(LIB_DIR)/$(DYNAMIC) || \
 			{ \
 				echo "Couldn't remove $(LIB_DIR)/$(DYNAMIC)"; \
 				exit 1; \
 			}; \
 	fi
-	rm -f $(OBJ_STATIC) 
-	rm -f $(OBJ_DYNAMIC) 
-	rm -f lcptools
+	@rm -f $(OBJ_STATIC)
+	@rm -f $(OBJ_DYNAMIC)
+	@rm -f $(CONFIG_HDR)
+
+$(CONFIG_HDR): $(CONFIG_IN) Makefile
+	@echo "Generating $@ (LABEL=$(LABEL) POS=$(POS) DCT=$(DCT) COMPUTE_LABEL=$(COMPUTE_LABEL))"
+	@sed -e 's/@LABEL@/$(LABEL)/' \
+	     -e 's/@POS@/$(POS)/' \
+	     -e 's/@DCT@/$(DCT)/' \
+		 -e 's/@COMPUTE_LABEL@/$(COMPUTE_LABEL)/' $< > $@
 
 # target for static library
 $(STATIC): $(OBJ_STATIC)
 	$(AR) $(ARFLAGS) $@ $^
-	rm -f $(OBJ_STATIC)
-	mkdir -p $(LIB_DIR)
+	@rm -f $(OBJ_STATIC)
+	@mkdir -p $(LIB_DIR)
+	@echo "mv $@ $(LIB_DIR)"
 	@mv $@ $(LIB_DIR) || \
 		{ \
 			echo "Couldn't move $@ to $(LIB_DIR)"; \
@@ -92,27 +107,21 @@ $(STATIC): $(OBJ_STATIC)
 # target for dynamic library
 $(DYNAMIC): $(OBJ_DYNAMIC)
 	$(CXX) -shared -o $@ $^ -lm
-	rm -f $(OBJ_DYNAMIC)
-	mkdir -p $(LIB_DIR)
+	@rm -f $(OBJ_DYNAMIC)
+	@mkdir -p $(LIB_DIR)
+	@echo "mv $@ $(LIB_DIR)"
 	@mv $@ $(LIB_DIR) || \
 		{ \
 			echo "Couldn't move $@ to $(LIB_DIR)"; \
 			exit 1; \
 		}
 
-# target to compile lcptools executable
-lcptools: $(SRC) $(HDR)
-	rm -f $@
-	$(CXX) $(CXXFLAGS) -I$(INCLUDE_DIR) -c $@.c -o $@.o
-	$(CXX) $(CXXFLAGS) -o $@ $@.o -L$(LIB_DIR) -llcptools -Wl,-rpath,$(LIB_DIR)
-	chmod +x $@
-
 # rule to compile .c files to .o files for static library
-%_s.o: %.c
+%_s.o: %.c $(CONFIG_HDR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # rule to compile .c files to .o files for dynamic library
-%_d.o: %.c
+%_d.o: %.c $(CONFIG_HDR)
 	$(CXX) $(CXXFLAGS) -c $(CXXEXTRA) $< -o $@
 
 # run all tests
