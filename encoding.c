@@ -1,14 +1,5 @@
-/**
- * @file encoding.c
- * @brief Implementation of encoding functions.
- *
- * This file contains the implementation of encoding functions used to
- * initialize the alphabet with their corresponding coefficients. The encodings
- * support initialization with default coefficients, specific coefficients, or
- * by reading coefficients from a file.
- */
-
 #include "encoding.h"
+
 
 int alphabet[128];
 int rc_alphabet[128];

@@ -1,184 +1,21 @@
 #include "lps.h"
 
-void init_lps(struct lps *lps_ptr, const char *str, int len) {   
-    lps_ptr->level = 1;
-    lps_ptr->size = 0;
-    lps_ptr->cores = (struct core *)malloc((len/CONSTANT_FACTOR)*sizeof(struct core));
-    lps_ptr->size = parse1(str, str+len, lps_ptr->cores, 0);
-}
 
-void init_lps_offset(struct lps *lps_ptr, const char *str, int len, uint64_t offset) {   
-    lps_ptr->level = 1;
-    lps_ptr->size = 0;
-    lps_ptr->cores = (struct core *)malloc((len/CONSTANT_FACTOR)*sizeof(struct core));
-    lps_ptr->size = parse1(str, str+len, lps_ptr->cores, offset);
-}
-
-void init_lps2(struct lps *lps_ptr, const char *str, int len) {   
-    lps_ptr->level = 1;
-    lps_ptr->size = 0;
-    lps_ptr->cores = (struct core *)malloc((len/CONSTANT_FACTOR)*sizeof(struct core));
-    lps_ptr->size = parse2(str, str+len, lps_ptr->cores, 0);
-}
-
-void init_lps3(struct lps *lps_ptr, FILE *in) {
-    // read the level from the binary file
-    if (fread(&(lps_ptr->level), sizeof(int), 1, in) != 1) {
-        fprintf(stderr, "Error reading level from file\n");
-        exit(EXIT_FAILURE);
-    }
-
-    // read the size (number of cores)
-    if(fread(&(lps_ptr->size), sizeof(int), 1, in) != 1) {
-        fprintf(stderr, "Error reading size from file\n");
-        exit(EXIT_FAILURE);
-    }
-
-    lps_ptr->cores = NULL;
-
-    if (lps_ptr->size) {
-        // allocate memory for the cores array
-        lps_ptr->cores = (struct core *)malloc(lps_ptr->size * sizeof(struct core));
-
-        // read each core object from the file
-        for (int i = 0; i < lps_ptr->size; i++) {
-            struct core *cr = &(lps_ptr->cores[i]);
-
-            if (fread(&(cr->bit_size), sizeof(ubit_size), 1, in) != 1) {
-                fprintf(stderr, "Error reading bit_size from file at %d\n", i);
-                exit(EXIT_FAILURE);
-            }
-    
-            ubit_size block_number = (cr->bit_size + UBLOCK_BIT_SIZE - 1) / UBLOCK_BIT_SIZE;
-            cr->bit_rep = (ublock *)malloc(block_number * sizeof(ublock));
-            if (fread(cr->bit_rep, block_number * sizeof(ublock), 1, in) != 1) {
-                fprintf(stderr, "Error reading bit_rep from file at %d\n", i);
-                exit(EXIT_FAILURE);
-            }
-         
-            if (fread(&(cr->label), sizeof(ulabel), 1, in) != 1) {
-                fprintf(stderr, "Error reading label from file at %d\n", i);
-                exit(EXIT_FAILURE);
-            }
-            if (fread(&(cr->start), sizeof(uint64_t), 1, in) != 1) {
-                fprintf(stderr, "Error reading start from file at %d\n", i);
-                exit(EXIT_FAILURE);
-            }
-            if (fread(&(cr->end), sizeof(uint64_t), 1, in) != 1) {
-                fprintf(stderr, "Error reading end from file at %d\n", i);
-                exit(EXIT_FAILURE);
-            }
-        }
-    }
-}
-
-void init_lps4(struct lps *lps_ptr, const char *str, int len, int lcp_level, int chunk_size) {
-
-    if (lcp_level < 1)
-        return;
-
-    lps_ptr->level = 1;
-    lps_ptr->size = 0; 
-    int estimated_size = (int)(len / pow((double)CONSTANT_FACTOR, lcp_level));
-    lps_ptr->cores = (struct core *)malloc(estimated_size*sizeof(struct core));
-
-    int str_index = 0, core_index = 0;
-
-    {
-        int str_len = minimum(chunk_size, len);
-        struct lps temp_lps;
-        init_lps_offset(&temp_lps, str, str_len, 0);
-        lps_deepen(&temp_lps, lcp_level);
-
-        if (temp_lps.size) {
-            memcpy(lps_ptr->cores, temp_lps.cores, (temp_lps.size)*sizeof(struct core));
-            core_index = (temp_lps.size);
-            lps_ptr->size = (temp_lps.size);
-            if (temp_lps.size>1)
-                str_index = lps_ptr->cores[core_index-2].start;
-            else 
-                str_index = lps_ptr->cores[core_index-1].start;
-        }
-        free(temp_lps.cores);
-    }
-
-    while (str_index < len) {
-        int str_len = minimum(chunk_size, len-str_index);
-        struct lps temp_lps;
-        init_lps_offset(&temp_lps, str+str_index, str_len, str_index);
-        lps_deepen(&temp_lps, lcp_level);
-
-        if (1<temp_lps.size) {
-            int overlap = 2;
-            while (0<overlap) {
-                if (lps_ptr->cores[core_index-overlap].start == temp_lps.cores[0].start)
-                    break;
-                overlap--;
-            }
-            for(int i=0; i<overlap; i++) {
-                free_core(&(temp_lps.cores[i]));
-            }
-            memcpy(lps_ptr->cores+core_index, temp_lps.cores+overlap, (temp_lps.size-overlap)*sizeof(struct core));
-            core_index += (temp_lps.size-overlap);
-            lps_ptr->size += (temp_lps.size-overlap);
-
-            if ((uint64_t)str_index < lps_ptr->cores[core_index-2].start) {
-                str_index = lps_ptr->cores[core_index-2].start;
-                free(temp_lps.cores);
-                continue;
-            } 
-        }
-        
-        // find next start point
-        for(int i=str_index+str_len-1; str_index <= i; i--) {
-            if (alphabet[(unsigned char)*(str+i)] == -1) {
-                str_index = i+1;
-                break;
-            }
-        }
-        if (alphabet[(unsigned char)*(str+str_index)] != -1) { // all of the characters are valid, so not valid cores found
-            str_index += str_len;
-        }
-        
-        free(temp_lps.cores);
-    }
-
-    if (lps_ptr->size)
-        lps_ptr->cores = (struct core*)realloc(lps_ptr->cores, lps_ptr->size * sizeof(struct core));
-}
-
-void free_lps(struct lps *lps_ptr) {
-    for(int i=0; i<lps_ptr->size; i++) {
-        free(lps_ptr->cores[i].bit_rep);
-    }
-    free(lps_ptr->cores);
-    lps_ptr->size = 0;
-}
-
-void write_lps(struct lps *lps_ptr, FILE *out) {
-    // write the level field
-    fwrite(&(lps_ptr->level), sizeof(int), 1, out);
-
-    // write the size (number of cores)
-    fwrite(&(lps_ptr->size), sizeof(int), 1, out);
-
-    // write each core object iteratively
-    if (lps_ptr->size) {
-        for (int i = 0; i < lps_ptr->size; i++) {
-            const struct core *cr = &(lps_ptr->cores[i]);
-
-            fwrite(&(cr->bit_size), sizeof(ubit_size), 1, out);
-            
-            ubit_size block_number = (cr->bit_size + UBLOCK_BIT_SIZE - 1) / UBLOCK_BIT_SIZE;
-            fwrite(cr->bit_rep, sizeof(ublock), block_number, out);
-            
-            fwrite(&(cr->label), sizeof(ulabel), 1, out);
-            fwrite(&(cr->start), sizeof(uint64_t), 1, out);
-            fwrite(&(cr->end), sizeof(uint64_t), 1, out);
-        }
-    }
-}
-
+/**
+ * @brief Parses a sequence to extract Locally Consisted Parsing (LCP) cores and stores them in a 
+ * array of cores.
+ *
+ * This function iterates over a sequence defined by iterators `begin` and `end` and identifies key
+ * segments, called "cores," that represent the (LCP) regions. By analyzing
+ * character relationships in the sequence (such as equality or relative order), it builds and stores
+ * these cores for further processing in the LCP framework.
+ *
+ * @param begin Iterator pointing to the beginning of the sequence to parse.
+ * @param end Iterator pointing to the end of the sequence to parse.
+ * @param cores Pointer to a array where the identified LCP cores will be stored.
+ * @param offset The distance measure where the indecies of the core will be shifted by.
+ * @return Size of the cores identified in the given string.
+ */
 int parse1(const char *begin, const char *end, struct core *cores, uint64_t offset) {
 
     const char *it1 = begin;
@@ -265,6 +102,21 @@ int parse1(const char *begin, const char *end, struct core *cores, uint64_t offs
     return core_index;
 }
 
+/**
+ * @brief Parses a sequence to extract Locally Consisted Parsing (LCP) cores and stores them in a 
+ * array of cores using complement alphabet.
+ *
+ * This function iterates over a sequence defined by iterators `begin` and `end` and identifies key
+ * segments, called "cores," that represent the (LCP) regions. By analyzing
+ * character relationships in the sequence (such as equality or relative order based on complement), 
+ * it builds and stores these cores for further processing in the LCP framework.
+ *
+ * @param begin Iterator pointing to the beginning of the sequence to parse.
+ * @param end Iterator pointing to the end of the sequence to parse.
+ * @param cores Pointer to a array where the identified LCP cores will be stored.
+ * @param offset The distance measure where the indecies of the core will be shifted by.
+ * @return Size of the cores identified in the given string.
+ */
 int parse2(const char *begin, const char *end, struct core *cores, uint64_t offset) {
 
     const char *it1 = end - 1;
@@ -351,6 +203,20 @@ int parse2(const char *begin, const char *end, struct core *cores, uint64_t offs
     return core_index;
 }
 
+/**
+ * @brief Parses a array of cores to extract Locally Consisted Parsing (LCP) cores and stores them in a 
+ * array of cores.
+ *
+ * This function iterates over a array of `core` structures defined by iterators `begin` and `end` and 
+ * identifies key segments, called "cores," that represent the (LCP) regions. By analyzing
+ * `core` structure relationships in the array (such as equality or relative order), it builds and stores
+ * these cores for further processing in the LCP framework.
+ *
+ * @param begin Iterator pointing to the beginning of the `core` array to parse.
+ * @param end Iterator pointing to the end of the `core` array to parse.
+ * @param cores Pointer to a array where the identified LCP cores will be stored.
+ * @return Size of the cores identified in the given string.
+ */
 int parse3(struct core *begin, struct core *end, struct core *cores) {
 
     struct core *it1 = begin;
@@ -436,6 +302,185 @@ int parse3(struct core *begin, struct core *end, struct core *cores) {
     return core_index;
 }
 
+void init_lps(struct lps *lps_ptr, const char *str, int len) {   
+    lps_ptr->level = 1;
+    lps_ptr->size = 0;
+    lps_ptr->cores = (struct core *)malloc((len/CONSTANT_FACTOR)*sizeof(struct core));
+    lps_ptr->size = parse1(str, str+len, lps_ptr->cores, 0);
+}
+
+void init_lps_offset(struct lps *lps_ptr, const char *str, int len, uint64_t offset) {   
+    lps_ptr->level = 1;
+    lps_ptr->size = 0;
+    lps_ptr->cores = (struct core *)malloc((len/CONSTANT_FACTOR)*sizeof(struct core));
+    lps_ptr->size = parse1(str, str+len, lps_ptr->cores, offset);
+}
+
+void init_lps2(struct lps *lps_ptr, const char *str, int len) {   
+    lps_ptr->level = 1;
+    lps_ptr->size = 0;
+    lps_ptr->cores = (struct core *)malloc((len/CONSTANT_FACTOR)*sizeof(struct core));
+    lps_ptr->size = parse2(str, str+len, lps_ptr->cores, 0);
+}
+
+void init_lps3(struct lps *lps_ptr, FILE *in) {
+    // read the level from the binary file
+    if (fread(&(lps_ptr->level), sizeof(int), 1, in) != 1) {
+        fprintf(stderr, "Error reading level from file\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // read the size (number of cores)
+    if(fread(&(lps_ptr->size), sizeof(int), 1, in) != 1) {
+        fprintf(stderr, "Error reading size from file\n");
+        exit(EXIT_FAILURE);
+    }
+
+    lps_ptr->cores = NULL;
+
+    if (lps_ptr->size) {
+        // allocate memory for the cores array
+        lps_ptr->cores = (struct core *)malloc(lps_ptr->size * sizeof(struct core));
+
+        // read each core object from the file
+        for (int i = 0; i < lps_ptr->size; i++) {
+            struct core *cr = &(lps_ptr->cores[i]);
+
+            if (fread(&(cr->bit_size), sizeof(ubit_size), 1, in) != 1) {
+                fprintf(stderr, "Error reading bit_size from file at %d\n", i);
+                exit(EXIT_FAILURE);
+            }
+    
+            ubit_size block_number = (cr->bit_size + UBLOCK_BIT_SIZE - 1) / UBLOCK_BIT_SIZE;
+            cr->bit_rep = (ublock *)malloc(block_number * sizeof(ublock));
+            if (fread(cr->bit_rep, block_number * sizeof(ublock), 1, in) != 1) {
+                fprintf(stderr, "Error reading bit_rep from file at %d\n", i);
+                exit(EXIT_FAILURE);
+            }
+         
+            if (fread(&(cr->label), sizeof(lcp_label), 1, in) != 1) {
+                fprintf(stderr, "Error reading label from file at %d\n", i);
+                exit(EXIT_FAILURE);
+            }
+            if (fread(&(cr->start), sizeof(lcp_pos), 1, in) != 1) {
+                fprintf(stderr, "Error reading start from file at %d\n", i);
+                exit(EXIT_FAILURE);
+            }
+            if (fread(&(cr->end), sizeof(lcp_pos), 1, in) != 1) {
+                fprintf(stderr, "Error reading end from file at %d\n", i);
+                exit(EXIT_FAILURE);
+            }
+        }
+    }
+}
+
+void init_lps4(struct lps *lps_ptr, const char *str, int len, int lcp_level, int chunk_size) {
+
+    if (lcp_level < 1)
+        return;
+
+    lps_ptr->level = 1;
+    lps_ptr->size = 0; 
+    int estimated_size = (int)(len / pow((double)CONSTANT_FACTOR, lcp_level));
+    lps_ptr->cores = (struct core *)malloc(estimated_size*sizeof(struct core));
+
+    int str_index = 0, core_index = 0;
+
+    {
+        int str_len = minimum(chunk_size, len);
+        struct lps temp_lps;
+        init_lps_offset(&temp_lps, str, str_len, 0);
+        lps_deepen(&temp_lps, lcp_level);
+
+        if (temp_lps.size) {
+            memcpy(lps_ptr->cores, temp_lps.cores, (temp_lps.size)*sizeof(struct core));
+            core_index = (temp_lps.size);
+            lps_ptr->size = (temp_lps.size);
+            if (temp_lps.size>1)
+                str_index = lps_ptr->cores[core_index-2].start;
+            else 
+                str_index = lps_ptr->cores[core_index-1].start;
+        }
+        free(temp_lps.cores);
+    }
+
+    while (str_index < len) {
+        int str_len = minimum(chunk_size, len-str_index);
+        struct lps temp_lps;
+        init_lps_offset(&temp_lps, str+str_index, str_len, str_index);
+        lps_deepen(&temp_lps, lcp_level);
+
+        if (1<temp_lps.size) {
+            int overlap = 2;
+            while (0<overlap) {
+                if (lps_ptr->cores[core_index-overlap].start == temp_lps.cores[0].start)
+                    break;
+                overlap--;
+            }
+            for(int i=0; i<overlap; i++) {
+                free_core(&(temp_lps.cores[i]));
+            }
+            memcpy(lps_ptr->cores+core_index, temp_lps.cores+overlap, (temp_lps.size-overlap)*sizeof(struct core));
+            core_index += (temp_lps.size-overlap);
+            lps_ptr->size += (temp_lps.size-overlap);
+
+            if ((lcp_pos)str_index < lps_ptr->cores[core_index-2].start) {
+                str_index = lps_ptr->cores[core_index-2].start;
+                free(temp_lps.cores);
+                continue;
+            } 
+        }
+        
+        // find next start point
+        for(int i=str_index+str_len-1; str_index <= i; i--) {
+            if (alphabet[(unsigned char)*(str+i)] == -1) {
+                str_index = i+1;
+                break;
+            }
+        }
+        if (alphabet[(unsigned char)*(str+str_index)] != -1) { // all of the characters are valid, so not valid cores found
+            str_index += str_len;
+        }
+        
+        free(temp_lps.cores);
+    }
+
+    if (lps_ptr->size)
+        lps_ptr->cores = (struct core*)realloc(lps_ptr->cores, lps_ptr->size * sizeof(struct core));
+}
+
+void free_lps(struct lps *lps_ptr) {
+    for(int i=0; i<lps_ptr->size; i++) {
+        free(lps_ptr->cores[i].bit_rep);
+    }
+    free(lps_ptr->cores);
+    lps_ptr->size = 0;
+}
+
+void write_lps(struct lps *lps_ptr, FILE *out) {
+    // write the level field
+    fwrite(&(lps_ptr->level), sizeof(int), 1, out);
+
+    // write the size (number of cores)
+    fwrite(&(lps_ptr->size), sizeof(int), 1, out);
+
+    // write each core object iteratively
+    if (lps_ptr->size) {
+        for (int i = 0; i < lps_ptr->size; i++) {
+            const struct core *cr = &(lps_ptr->cores[i]);
+
+            fwrite(&(cr->bit_size), sizeof(ubit_size), 1, out);
+            
+            ubit_size block_number = (cr->bit_size + UBLOCK_BIT_SIZE - 1) / UBLOCK_BIT_SIZE;
+            fwrite(cr->bit_rep, sizeof(ublock), block_number, out);
+            
+            fwrite(&(cr->label), sizeof(lcp_label), 1, out);
+            fwrite(&(cr->start), sizeof(lcp_pos), 1, out);
+            fwrite(&(cr->end), sizeof(lcp_pos), 1, out);
+        }
+    }
+}
+
 int64_t lps_memsize(const struct lps *lps_ptr) {
     uint64_t total = sizeof(struct lps);
     
@@ -445,7 +490,6 @@ int64_t lps_memsize(const struct lps *lps_ptr) {
 
     return total;
 }
-
 
 /**
  * @brief Performs Deterministic Coin Tossing (DCT) compression for a given number of iterations.
@@ -484,13 +528,13 @@ int lcp_dct_iters(struct lps *lps_ptr, int dct_iteration_count) {
  * @brief Performs Deterministic Coin Tossing (DCT) compression using the default iteration count.
  *
  * This function applies DCT compression to the cores stored in the LPS structure using
- * `DCT_ITERATION_COUNT`. It is a convenience wrapper around `lcp_dct_iters`.
+ * `LCP_DCT_ITERATION_COUNT`. It is a convenience wrapper around `lcp_dct_iters`.
  *
  * @param lps_ptr The `lps` object whose cores will be compressed.
  * @return 0 if DCT compression was performed, -1 if there are not enough cores.
  */
 int lcp_dct(struct lps *lps_ptr) {
-    return lcp_dct_iters(lps_ptr, DCT_ITERATION_COUNT);
+    return lcp_dct_iters(lps_ptr, LCP_DCT_ITERATION_COUNT);
 }
 
 int lps_deepen1_dct_iters(struct lps *lps_ptr, int dct_iteration_count) {
@@ -521,7 +565,7 @@ int lps_deepen1_dct_iters(struct lps *lps_ptr, int dct_iteration_count) {
 }
 
 int lps_deepen1(struct lps *lps_ptr) {
-    return lps_deepen1_dct_iters(lps_ptr, DCT_ITERATION_COUNT);
+    return lps_deepen1_dct_iters(lps_ptr, LCP_DCT_ITERATION_COUNT);
 }
 
 int lps_deepen_dct_iters(struct lps *lps_ptr, int lcp_level, int dct_iteration_count) {
@@ -535,7 +579,7 @@ int lps_deepen_dct_iters(struct lps *lps_ptr, int lcp_level, int dct_iteration_c
 }
 
 int lps_deepen(struct lps *lps_ptr, int lcp_level) {
-    return lps_deepen_dct_iters(lps_ptr, lcp_level, DCT_ITERATION_COUNT);
+    return lps_deepen_dct_iters(lps_ptr, lcp_level, LCP_DCT_ITERATION_COUNT);
 }
 
 void print_lps(const struct lps *lps_ptr) {

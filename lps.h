@@ -19,29 +19,26 @@
  * - Calculating memory usage of the constructed LCP structure.
  *
  * Dependencies:
- * - Requires core.h, encoding.h, hash.h, and constant.h for auxiliary data structures and utilities.
+ * - Requires core.h, encoding.h, and config.h, for auxiliary data structures and utilities.
  *
  * Example usage:
  * @code
- *   std::string sequence = "AGCTAGCTAG";
- *   lcp::lps parser(sequence);
- *   parser.deepen();
- *   parser.write("output.lps");
+ *   const char *sequence = "AGCTAGCTAG";
+ *   struct lps lps_obj;
+ *   init_lps(&lps_obj, sequence, 10);
+ *   lps_deepen1(&lps_obj);
+ *   free_lps(&lps_obj);
  * @endcode
  *
  * @see core.h
  * @see encoding.h
- * @see hash.h
- * @see constant.h
+ * @see config.h
  *
- * @namespace lcp
  * @struct lps
  *
- * @note Destructor handles clean-up of allocated memory for cores.
- *
  * @author Akmuhammet Ashyralyyev
- * @version 1.0
- * @date 2024-09-14
+ * @version 2.1
+ * @date 2026-08-11
  *
  */
 
@@ -60,9 +57,9 @@ extern "C" {
 #define CONSTANT_FACTOR         1.5
 
 struct lps {
-    int level;
-    int size;
-    struct core *cores;
+    int level;          // LCP level
+    int size;           // core array size
+    struct core *cores; // cores
 };
 
 /**
@@ -144,56 +141,6 @@ void free_lps(struct lps *lps_ptr);
 void write_lps(struct lps *lps_ptr, FILE *out);
 
 /**
- * @brief Parses a sequence to extract Locally Consisted Parsing (LCP) cores and stores them in a 
- * array of cores.
- *
- * This function iterates over a sequence defined by iterators `begin` and `end` and identifies key
- * segments, called "cores," that represent the (LCP) regions. By analyzing
- * character relationships in the sequence (such as equality or relative order), it builds and stores
- * these cores for further processing in the LCP framework.
- *
- * @param begin Iterator pointing to the beginning of the sequence to parse.
- * @param end Iterator pointing to the end of the sequence to parse.
- * @param cores Pointer to a array where the identified LCP cores will be stored.
- * @param offset The distance measure where the indecies of the core will be shifted by.
- * @return Size of the cores identified in the given string.
- */
-int parse1(const char *begin, const char *end, struct core *cores, uint64_t offset);
-
-/**
- * @brief Parses a sequence to extract Locally Consisted Parsing (LCP) cores and stores them in a 
- * array of cores using complement alphabet.
- *
- * This function iterates over a sequence defined by iterators `begin` and `end` and identifies key
- * segments, called "cores," that represent the (LCP) regions. By analyzing
- * character relationships in the sequence (such as equality or relative order based on complement), 
- * it builds and stores these cores for further processing in the LCP framework.
- *
- * @param begin Iterator pointing to the beginning of the sequence to parse.
- * @param end Iterator pointing to the end of the sequence to parse.
- * @param cores Pointer to a array where the identified LCP cores will be stored.
- * @param offset The distance measure where the indecies of the core will be shifted by.
- * @return Size of the cores identified in the given string.
- */
-int parse2(const char *begin, const char *end, struct core *cores, uint64_t offset);
-
-/**
- * @brief Parses a array of cores to extract Locally Consisted Parsing (LCP) cores and stores them in a 
- * array of cores.
- *
- * This function iterates over a array of `core` structures defined by iterators `begin` and `end` and 
- * identifies key segments, called "cores," that represent the (LCP) regions. By analyzing
- * `core` structure relationships in the array (such as equality or relative order), it builds and stores
- * these cores for further processing in the LCP framework.
- *
- * @param begin Iterator pointing to the beginning of the `core` array to parse.
- * @param end Iterator pointing to the end of the `core` array to parse.
- * @param cores Pointer to a array where the identified LCP cores will be stored.
- * @return Size of the cores identified in the given string.
- */
-int parse3(struct core *begin, struct core *end, struct core *cores);
-
-/**
  * @brief Calculates and returns the memory size used by the `lps` structure.
  *
  * @return The memory size (in bytes) used by the `lps` structure.
@@ -220,7 +167,7 @@ int lps_deepen1_dct_iters(struct lps *lps_ptr, int dct_iteration_count);
  * @brief Deepens the compression level of the LPS structure by one level using the default DCT iteration count.
  *
  * This function compresses the existing cores and finds new cores for the next compression level
- * using `DCT_ITERATION_COUNT`. It is a convenience wrapper around `lps_deepen1_dct_iters`.
+ * using `LCP_DCT_ITERATION_COUNT`. It is a convenience wrapper around `lps_deepen1_dct_iters`.
  *
  * @param lps_ptr The `lps` object to deepen.
  * @return 1 if the structure was successfully deepened, 0 otherwise.
@@ -248,7 +195,7 @@ int lps_deepen_dct_iters(struct lps *lps_ptr, int lcp_level, int dct_iteration_c
  * @brief Deepens the compression level of the LPS structure to a specific level using the default DCT iteration count.
  *
  * This function repeatedly deepens the LPS structure one level at a time until the requested
- * `lcp_level` is reached or no further deepening is possible. It uses `DCT_ITERATION_COUNT` for
+ * `lcp_level` is reached or no further deepening is possible. It uses `LCP_DCT_ITERATION_COUNT` for
  * each DCT compression step and is a convenience wrapper around `lps_deepen_dct_iters`.
  *
  * @param lps_ptr The `lps` object to deepen.

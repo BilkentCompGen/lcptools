@@ -1,25 +1,5 @@
-/**
- * @file core.c
- * @brief Implementation of the `core` struct and its associated functions.
- *
- * This file contains the implementation of the `core` struct, which is used to
- * represent a sequence of encoded bits for string data. The stuct supports
- * operations such as compression, comparison, and writing/reading to files.
- *
- * Key operations include:
- * - Encoding strings into bit arrays using coefficient-based encoding.
- * - Constructing `core` objects from strings or other `core` objects.
- * - Compressing bit representations to optimize memory usage.
- * - Writing and reading `core` objects to and from files.
- * - Comparing `core` objects with overloaded operators.
- * - Efficiently handling block-wise bit manipulations.
- *
- * @note The `STATS` macro is used to conditionally compile sections of the code
- * that track additional metadata such as `start` and `end` indices for
- * performance analysis.
- */
-
 #include "core.h"
+
 
 /**
  * @brief Computes the 32-bit MurmurHash3 hash for a given key.
@@ -33,7 +13,7 @@
  * @param seed An initial seed value for the hash computation.
  * @return The resulting 32-bit hash value.
  */
-uint32_t MurmurHash3_32(const void *key, int len, uint32_t seed) {
+static inline uint32_t MurmurHash3_32(const void *key, int len, uint32_t seed) {
     const uint8_t *data = (const uint8_t *)key;
     const int nblocks = len / 4;
 
@@ -89,7 +69,7 @@ uint32_t MurmurHash3_32(const void *key, int len, uint32_t seed) {
     return h1;
 }
 
-void init_core1(struct core *cr, const char *begin, uint64_t distance, uint64_t start_index, uint64_t end_index) {
+void init_core1(struct core *cr, const char *begin, lcp_pos distance, lcp_pos start_index, lcp_pos end_index) {
 
     cr->start = start_index;
     cr->end = end_index;
@@ -130,7 +110,7 @@ void init_core1(struct core *cr, const char *begin, uint64_t distance, uint64_t 
     cr->label |= (alphabet[(*(begin+distance-1)) & 0xDF]);
 }
 
-void init_core2(struct core *cr, const char *begin, uint64_t distance, uint64_t start_index, uint64_t end_index) {
+void init_core2(struct core *cr, const char *begin, lcp_pos distance, lcp_pos start_index, lcp_pos end_index) {
 
     cr->start = start_index;
     cr->end = end_index;
@@ -170,7 +150,7 @@ void init_core2(struct core *cr, const char *begin, uint64_t distance, uint64_t 
     cr->label |= (rc_alphabet[(*(begin+distance-1)) & 0xDF]);
 }
 
-void init_core3(struct core *cr, struct core *begin, uint64_t distance) {
+void init_core3(struct core *cr, struct core *begin, lcp_pos distance) {
 
     // it is known that other core is placed in cr
     free(cr->bit_rep);
@@ -216,15 +196,15 @@ void init_core3(struct core *cr, struct core *begin, uint64_t distance) {
         }
     }
 
-    ulabel data[4];
+    lcp_label data[4];
     data[0] = (begin)->label;
     data[1] = (begin+distance-2)->label;
     data[2] = (begin+distance-1)->label;
     data[3] = distance-2;
-    cr->label = MurmurHash3_32((void*)data, 4 * sizeof(ulabel), 42);
+    cr->label = MurmurHash3_32((void*)data, 4 * sizeof(lcp_label), 42);
 }
 
-void init_core4(struct core *cr, ubit_size bit_size, ublock *bit_rep, ulabel label, uint64_t start, uint64_t end) {
+void init_core4(struct core *cr, ubit_size bit_size, ublock *bit_rep, lcp_label label, lcp_pos start, lcp_pos end) {
     cr->bit_size = bit_size;
     cr->bit_rep = bit_rep;
     cr->label = label;
@@ -284,7 +264,7 @@ uint64_t core_memsize(const struct core *cr) {
 }
 
 void print_core(const struct core *cr) {
-    uint64_t block_number = (cr->bit_size - 1) / UBLOCK_BIT_SIZE + 1;
+    ubit_size block_number = (cr->bit_size - 1) / UBLOCK_BIT_SIZE + 1;
     for (int index = cr->bit_size - 1; 0 <= index; index--) {
         printf("%d", (cr->bit_rep[block_number - index / UBLOCK_BIT_SIZE - 1] >> (index % UBLOCK_BIT_SIZE)) & 1);
     }

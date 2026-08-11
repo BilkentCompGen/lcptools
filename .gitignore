@@ -11,3 +11,4 @@ lcptools
 
 .nfs*
 *.o
+config.h

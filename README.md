@@ -56,6 +56,36 @@ To install lcptools in your home directory (or another custom directory), you do
     make uninstall PREFIX=$(HOME)/.local
     ```
 
+#### Build Configuration
+
+This project uses build-time configuration to generate type definitions for core data structures. Type widths are determined at compile time via the Makefile, allowing you to optimize struct sizes for your specific use case.
+
+##### Configurable Types
+
+The following parameters control integer type widths in `config.h`:
+
+- `LABEL`: Width of `lcp_label` in bits (32 or 64)
+- `POS`: Width of `lcp_pos` in bits (32 or 64)
+- `DCT`: Default DCT iteration count (integer)
+
+##### Building with Custom Configuration
+
+Pass configuration variables to `make`:
+
+```sh
+make install LABEL=64 POS=64 DCT=1
+```
+
+Or use 32-bit types for smaller memory footprint:
+
+```sh
+make install LABEL=32 POS=32 DCT=1
+```
+
+The build system generates `config.h` from `config.h.in` by substituting your values. These values are then used as compile-time conditionals to define concrete types (`uint32_t` or `uint64_t`) in struct definitions like `struct core`.
+
+**Note:** If `config.h` becomes stale after changing parameters, regenerate it by re-running make with new values. Mismatched binaries and headers will cause undefined behavior.
+
 ## Usage
 
 To compile your program with your program, you need to specify the include and library paths based on your installation method.
@@ -194,3 +224,4 @@ This function iteratively compresses and processes cores to find new cores in co
 ## Default Variables
 
 The default iteration count for compression in each deepening is set to 1.
+The LCP core label is set to 32 (uint32_t), and LCP core begin and end offsets to 32 (uint32_t).

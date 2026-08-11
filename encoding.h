@@ -9,40 +9,21 @@
  * displaying the encoding summary, and loading custom encodings from
  * user-specified files or maps.
  *
- * Key functionalities include:
- *   - Initializes encoding coefficients for standard DNA bases (A, C, G, T) and
- * their reverse complements.
- *   - Supports custom encoding initialization via a map or file input.
- *   - Automatically calculates dictionary bit size based on the maximum
- * encoding values.
- *   - Provides reverse complement encodings for DNA sequences, a critical
- * feature in bioinformatics.
- *   - Displays an overview of the encoding scheme including coefficients and
- * bit size.
- *   - Loads encoding mappings from an external file, making it easy to extend
- * the encoding system for custom alphabets or symbols.
- *
  * Example usage:
  * @code
  *   // Initialize standard encoding and reverse complements
- *   lcp::init_coefficients(true);
+ *   LCP_INIT();
  *
  *   // Initialize encoding from a file
- *   std::string encoding_file = "dna_encoding.txt";
- *   lcp::init_coefficients(encoding_file, true);
+ *   LCP_INIT_FILE("encoding_test.txt", 0);
  * @endcode
  *
- * @see constant.h
  * @see core.h
  *
- * @namespace lcp
- *
- * @note Initialization functions throw std::invalid_argument exceptions for
- * invalid maps or file formats.
  *
  * @author Akmuhammet Ashyralyyev
- * @version 1.0
- * @date 2024-09-14
+ * @version 2.1
+ * @date 2026-08-11
  *
  */
 

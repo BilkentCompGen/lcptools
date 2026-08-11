@@ -117,7 +117,7 @@ void analyze(struct lps *str,
 void process(std::string &sequence,
              int (&core_counts)[LCP_LEVEL],
              int (&contiguous_counts)[LCP_LEVEL],
-             std::set<ulabel> (&distinct_cores)[LCP_LEVEL],
+             std::set<lcp_label> (&distinct_cores)[LCP_LEVEL],
              std::vector<std::chrono::milliseconds> &durations,
              int (&distances)[LCP_LEVEL][DISTANCE_LENGTH],
              std::vector<std::vector<int>> &distancesXL,
@@ -193,7 +193,7 @@ int main(int argc, char **argv) {
     // section 1
     int core_counts[LCP_LEVEL] = {0};
 	int contiguous_counts[LCP_LEVEL] = {0};
-    std::set<ulabel> distinct_cores[LCP_LEVEL];
+    std::set<lcp_label> distinct_cores[LCP_LEVEL];
     std::vector<std::chrono::milliseconds> durations(LCP_LEVEL);
 	// section 2
     int distances[LCP_LEVEL][DISTANCE_LENGTH] = {0};

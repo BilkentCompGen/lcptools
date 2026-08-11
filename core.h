@@ -17,19 +17,15 @@
  * - Calculating memory usage of the constructed core structure.
  *
  * Dependencies:
- * - Requires constant.h and encoding.h for auxiliary data structures and
- * utilities.
+ * - Requires encoding.h and config.h for auxiliary data structures and utilities.
  *
- * @see constant.h
  * @see encoding.h
- *
- * @namespace lcp
+ * 
  * @struct core
  *
- *
  * @author Akmuhammet Ashyralyyev
- * @version 1.0
- * @date 2024-09-14
+ * @version 2.1
+ * @date 2026-08-11
  *
  */
 
@@ -41,26 +37,41 @@ extern "C" {
 #endif
 
 #include "encoding.h"
-#include "string.h"
+#include "config.h"
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h> 
+#include <stdint.h>
 
 #define UBLOCK_BIT_SIZE 32
-#define DCT_ITERATION_COUNT 1
 
 #define minimum(a, b) ((a) < (b) ? (a) : (b))
 
 typedef unsigned int ublock;
 typedef uint32_t ubit_size;
-typedef uint32_t ulabel;
+
+#if LCP_LABEL_BITS == 64
+typedef uint64_t lcp_label;
+#elif LCP_LABEL_BITS == 32
+typedef uint32_t lcp_label;
+#else
+#error "LCP_LABEL_BITS must be 32 or 64; regenerate config.h"
+#endif
+
+#if LCP_POS_BITS == 64
+typedef uint64_t lcp_pos;
+#elif LCP_POS_BITS == 32
+typedef uint32_t lcp_pos;
+#else
+#error "LCP_POS_BITS must be 32 or 64; regenerate config.h"
+#endif
 
 struct core {
-    ubit_size bit_size;
-    ublock *bit_rep;
-    ulabel label;
-    uint64_t start;
-    uint64_t end;
+    lcp_pos start;      // start offset of lcp core within string
+    lcp_pos end;        // end offset of lcp core within string
+    ublock *bit_rep;    // open bit representation of lcp core alphabet
+    lcp_label label;       // if od the core, computed from either base alphabet or sub-labels
+    ubit_size bit_size; // number of bits stored in bit_rep
 };
 
 /**
@@ -75,7 +86,7 @@ struct core {
  * @param start_index Start index of the substring within the data.
  * @param end_index End index of the substring within the data.
  */
-void init_core1(struct core *cr, const char *begin, uint64_t distance, uint64_t start_index, uint64_t end_index);
+void init_core1(struct core *cr, const char *begin, lcp_pos distance, lcp_pos start_index, lcp_pos end_index);
 
 /**
  * @brief Initializes a core structure with the provided string data and index range.
@@ -89,7 +100,7 @@ void init_core1(struct core *cr, const char *begin, uint64_t distance, uint64_t 
  * @param start_index Start index of the substring within the data.
  * @param end_index End index of the substring within the data.
  */
-void init_core2(struct core *cr, const char *begin, uint64_t distance, uint64_t start_index, uint64_t end_index);
+void init_core2(struct core *cr, const char *begin, lcp_pos distance, lcp_pos start_index, lcp_pos end_index);
 
 /**
  * @brief Initializes a core structure by combining data from other core structures.
@@ -102,7 +113,7 @@ void init_core2(struct core *cr, const char *begin, uint64_t distance, uint64_t 
  * @param begin Pointer to the start of the sequence of core structures.
  * @param distance Number of core structures to process in the sequence.
  */
-void init_core3(struct core *cr, struct core *begin, uint64_t distance);
+void init_core3(struct core *cr, struct core *begin, lcp_pos distance);
 
 /**
  * @brief Directly initializes a core structure with precomputed representation and metadata.
@@ -118,7 +129,7 @@ void init_core3(struct core *cr, struct core *begin, uint64_t distance);
  * @param start Start index of the substring or sequence represented by the core.
  * @param end End index of the substring or sequence represented by the core.
  */
-void init_core4(struct core *cr, ubit_size bit_size, ublock *bit_rep, ulabel label, uint64_t start, uint64_t end);
+void init_core4(struct core *cr, ubit_size bit_size, ublock *bit_rep, lcp_label label, lcp_pos start, lcp_pos end);
 
 /**
  * @brief Frees the allocated memory associated with a core structure.
