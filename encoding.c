@@ -5,7 +5,7 @@ int alphabet[128];
 int rc_alphabet[128];
 char characters[128];
 
-void LCP_SUMMARY() {
+void LCP_SUMMARY(void) {
     printf("# Alphabet encoding summary\n");
     printf("# Coefficients: ");
     for (int i = 0; i < 128; i++) {
@@ -16,7 +16,7 @@ void LCP_SUMMARY() {
     printf("\n");
 }
 
-void LCP_INIT() {
+void LCP_INIT(void) {
     LCP_INIT2(0);
 }
 

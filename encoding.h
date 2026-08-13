@@ -47,14 +47,14 @@ extern char characters[128];
  * @brief Displays the alphabet encoding summary including coefficients
  * and dictionary bit size.
  */
-void LCP_SUMMARY();
+void LCP_SUMMARY(void);
 
 /**
  * @brief Initializes the encoding coefficients for standard DNA bases
  * (A, C, G, T) and their reverse complements. Sets default values for
  * coefficients and dictionary bit size.
  */
-void LCP_INIT();
+void LCP_INIT(void);
 
 /**
  * @brief Initializes the encoding coefficients for standard DNA bases
