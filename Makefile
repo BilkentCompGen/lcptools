@@ -9,16 +9,12 @@ POS ?= 32
 DCT ?= 1
 COMPUTE_LABEL ?= 1
 
-ifeq ($(filter 32 64,$(LABEL)),)
+ifeq ($(filter 0 32 64,$(LABEL)),)
 $(error LABEL must be 32 or 64, got '$(LABEL)')
 endif
 
-ifeq ($(filter 32 64,$(POS)),)
+ifeq ($(filter 0 32 64,$(POS)),)
 $(error POS must be 32 or 64, got '$(POS)')
-endif
-
-ifeq ($(filter 0 1,$(COMPUTE_LABEL)),)
-$(error COMPUTE_LABEL must be 0 or 1, got '$(COMPUTE_LABEL)')
 endif
 
 # archiver and flags
@@ -86,11 +82,10 @@ clean:
 	@rm -f $(CONFIG_HDR)
 
 $(CONFIG_HDR): $(CONFIG_IN) Makefile
-	@echo "Generating $@ (LABEL=$(LABEL) POS=$(POS) DCT=$(DCT) COMPUTE_LABEL=$(COMPUTE_LABEL))"
+	@echo "Generating $@ (LABEL=$(LABEL) POS=$(POS) DCT=$(DCT))"
 	@sed -e 's/@LABEL@/$(LABEL)/' \
 	     -e 's/@POS@/$(POS)/' \
-	     -e 's/@DCT@/$(DCT)/' \
-		 -e 's/@COMPUTE_LABEL@/$(COMPUTE_LABEL)/' $< > $@
+	     -e 's/@DCT@/$(DCT)/' $< > $@
 
 # target for static library
 $(STATIC): $(OBJ_STATIC)

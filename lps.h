@@ -111,6 +111,8 @@ void init_lps2(struct lps *lps_ptr, const char *str, int len);
  */
 void init_lps3(struct lps *lps_ptr, FILE *in);
 
+#if LCP_POS_BITS != 0
+
 /**
  * @brief Constructs an lps object from a string, using split and merge paradigm.
  * The give string will be roughly split into the length of `chunk_size`
@@ -122,6 +124,8 @@ void init_lps3(struct lps *lps_ptr, FILE *in);
  * @param chunk_size The length of the chunks to be processed.
  */
 void init_lps4(struct lps *lps_ptr, const char *str, int len, int lcp_level, int chunk_size);
+
+#endif 
 
 /**
  * @brief Destructor for the lps object. Frees dynamically allocated memory for cores.

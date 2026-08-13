@@ -354,6 +354,8 @@ void init_lps3(struct lps *lps_ptr, FILE *in) {
     }
 }
 
+#if LCP_POS_BITS != 0
+
 void init_lps4(struct lps *lps_ptr, const char *str, int len, int lcp_level, int chunk_size) {
 
     if (lcp_level < 1)
@@ -425,6 +427,8 @@ void init_lps4(struct lps *lps_ptr, const char *str, int len, int lcp_level, int
     if (lps_ptr->size)
         lps_ptr->cores = (struct core*)realloc(lps_ptr->cores, lps_ptr->size * sizeof(struct core));
 }
+
+#endif
 
 void free_lps(struct lps *lps_ptr) {
     free(lps_ptr->cores);

@@ -1,7 +1,7 @@
 #include "core.h"
 
 
-#if LCP_COMPUTE_LABEL == 1
+#if LCP_LABEL_BITS != 0
 
 static inline uint32_t rotl32(uint32_t x, int r) {
     return (x << r) | (x >> (32 - r));
@@ -24,9 +24,14 @@ static inline lcp_label hash4_label(lcp_label w0, lcp_label w1, lcp_label w2, lc
 #endif
 
 void init_core1(struct core *cr, const char *begin, lcp_pos distance, lcp_pos start_index, lcp_pos end_index) {
+#if LCP_POS_BITS != 0    
     cr->start = start_index;
     cr->end = end_index;
-#if LCP_COMPUTE_LABEL == 1
+#else
+    (void)start_index;
+    (void)end_index;
+#endif
+#if LCP_LABEL_BITS != 0
     cr->label = 0;
     cr->label |= ((distance-2) << 6);
     cr->label |= (alphabet[(int)(*begin)] << 4);
@@ -45,9 +50,14 @@ void init_core1(struct core *cr, const char *begin, lcp_pos distance, lcp_pos st
 }
 
 void init_core2(struct core *cr, const char *begin, lcp_pos distance, lcp_pos start_index, lcp_pos end_index) {
+#if LCP_POS_BITS != 0
     cr->start = start_index;
     cr->end = end_index;
-#if LCP_COMPUTE_LABEL == 1
+#else
+    (void)start_index;
+    (void)end_index;
+#endif
+#if LCP_LABEL_BITS != 0
     cr->label = 0;
     cr->label |= ((distance-2) << 6);
     cr->label |= (rc_alphabet[(int)(*(begin))] << 4);
@@ -66,8 +76,10 @@ void init_core2(struct core *cr, const char *begin, lcp_pos distance, lcp_pos st
 }
 
 void init_core3(struct core *cr, struct core *begin, lcp_pos distance) {
+#if LCP_POS_BITS != 0 
     cr->start = begin->start;
     cr->end = (begin+distance-1)->end;
+#endif
     cr->bit_rep = 0;
     cr->bit_size = 0;
 
@@ -83,7 +95,7 @@ void init_core3(struct core *cr, struct core *begin, lcp_pos distance) {
 
     cr->bit_rep = 0x7FFFFFFFFFFFFFFF & cr->bit_rep;
     cr->bit_size = minimum(cr->bit_size, 63);
-#if LCP_COMPUTE_LABEL == 1
+#if LCP_LABEL_BITS != 0
     cr->label = hash4_label(begin->label, (begin + distance - 2)->label, (begin + distance - 1)->label, (lcp_label)(distance - 2));
 #endif
 }
@@ -91,13 +103,18 @@ void init_core3(struct core *cr, struct core *begin, lcp_pos distance) {
 void init_core4(struct core *cr, ubit_size bit_size, uint64_t bit_rep, lcp_label label, lcp_pos start, lcp_pos end) {
     cr->bit_size = bit_size;
     cr->bit_rep = bit_rep;
-#if LCP_COMPUTE_LABEL == 1
+#if LCP_LABEL_BITS != 0
     cr->label = label;
 #else
     (void)label;
 #endif
+#if LCP_POS_BITS != 0
     cr->start = start;
     cr->end = end;
+#else   
+    (void)start;
+    (void)end;
+#endif
 }
 
 void print_core(const struct core *cr) {

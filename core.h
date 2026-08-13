@@ -54,23 +54,29 @@ typedef uint32_t ubit_size;
 typedef uint64_t lcp_label;
 #elif LCP_LABEL_BITS == 32
 typedef uint32_t lcp_label;
+#elif LCP_LABEL_BITS == 0
+typedef uint32_t lcp_label;
 #else
-#error "LCP_LABEL_BITS must be 32 or 64; regenerate config.h"
+#error "LCP_LABEL_BITS must be 0, 32 or 64; regenerate config.h"
 #endif
 
 #if LCP_POS_BITS == 64
 typedef uint64_t lcp_pos;
 #elif LCP_POS_BITS == 32
 typedef uint32_t lcp_pos;
+#elif LCP_POS_BITS == 0
+typedef uint32_t lcp_pos;
 #else
-#error "LCP_POS_BITS must be 32 or 64; regenerate config.h"
+#error "LCP_POS_BITS must be 0, 32 or 64; regenerate config.h"
 #endif
 
 struct core {
+#if LCP_POS_BITS != 0
     lcp_pos start;      // start offset of lcp core within string
     lcp_pos end;        // end offset of lcp core within string
+#endif
     uint64_t bit_rep;   // constrainted bit representation of lcp core alphabet
-#if LCP_COMPUTE_LABEL == 1
+#if LCP_LABEL_BITS != 0
     lcp_label label;    // if od the core, computed from either base alphabet or sub-labels
 #endif
     ubit_size bit_size; // number of bits stored in bit_rep
@@ -392,7 +398,9 @@ static inline void core_compress_level1(const struct core *left, struct core *ri
         right->bit_size = bitlen_min2(out);
     }
 
+#if LCP_POS_BITS != 0
     right->start = left->start;
+#endif
 }
 
 
@@ -446,7 +454,9 @@ static inline void core_compress_upper(const struct core *left, struct core *rig
     uint64_t out = 2ull * (uint64_t)idx + ((right->bit_rep >> idx) & 1ull);
     right->bit_rep = out;
     right->bit_size = bitlen_min2(out);
+#if LCP_POS_BITS != 0
     right->start = left->start;
+#endif
 }
 
 #ifdef __cplusplus

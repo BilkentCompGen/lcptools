@@ -12,16 +12,13 @@
 #ifndef LCPTOOLS_CONFIG_H
 #define LCPTOOLS_CONFIG_H
 
-/* Width of `lcp_label` in bits. Either 32 or 64. */
+/* Width of `lcp_label` in bits. Either 0, 32 or 64. */
 #define LCP_LABEL_BITS @LABEL@
 
-/* Width of `lcp_pos` in bits. Either 32 or 64. */
+/* Width of `lcp_pos` in bits. Either 0, 32 or 64. */
 #define LCP_POS_BITS @POS@
 
 /* Default number of DCT iterations used by lcp_dct/lps_deepen. */
 #define LCP_DCT_ITERATION_COUNT @DCT@
-
-/* Default version of LCP (either compute labels or only parse) */
-#define LCP_COMPUTE_LABEL @COMPUTE_LABEL@
 
 #endif

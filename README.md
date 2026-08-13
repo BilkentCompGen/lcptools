@@ -65,23 +65,22 @@ This project uses build-time configuration to generate type definitions for core
 
 The following parameters control integer type widths in `config.h`:
 
-- `LABEL`: Width of `lcp_label` in bits (32 or 64)
-- `POS`: Width of `lcp_pos` in bits (32 or 64)
+- `LABEL`: Width of `lcp_label` in bits (0, 32 or 64)
+- `POS`: Width of `lcp_pos` in bits (0, 32 or 64)
 - `DCT`: Default DCT iteration count (integer)
-- `COMPUTE_LABEL`: Default decision to add label computation (0 or 1)
 
 ##### Building with Custom Configuration
 
 Pass configuration variables to `make`:
 
 ```sh
-make install LABEL=64 POS=64 DCT=1 COMPUTE_LABEL=0
+make install LABEL=64 POS=64 DCT=1
 ```
 
 Or use 32-bit types for smaller memory footprint:
 
 ```sh
-make install LABEL=32 POS=32 DCT=1 COMPUTE_LABEL=0
+make install LABEL=32 POS=32 DCT=1
 ```
 
 The build system generates `config.h` from `config.h.in` by substituting your values. These values are then used as compile-time conditionals to define concrete types (`uint32_t` or `uint64_t`) in struct definitions like `struct core`.
@@ -227,4 +226,3 @@ This function iteratively compresses and processes cores to find new cores in co
 
 The default iteration count for compression in each deepening is set to 1.
 The LCP core label is set to 32 (uint32_t), and LCP core begin and end offsets to 32 (uint32_t).
-By default, LCP sets label computation to 1.
