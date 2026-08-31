@@ -61,13 +61,22 @@ To install lcptools in your home directory (or another custom directory), you do
 
 This project uses build-time configuration to generate type definitions for core data structures. Type widths are determined at compile time via the Makefile, allowing you to optimize struct sizes for your specific use case.
 
-##### Configurable Types
+##### Configurable Parameters
 
-The following parameters control integer type widths in `config.h`:
+| Variable   | Values           | Default | Effect                                                                           |
+| ---------- | ---------------- | ------- | -------------------------------------------------------------------------------- |
+| `ALPHABET` | `dna`, `protein` | `dna`   | Symbol table and bits per symbol. See [Character Encoding](#character-encoding). |
+| `CORE`     | `var`, `fixed`   | `var`   | How RINT and SSEQ segments become cores. See [Core length](#core-length).        |
+| `LABEL`    | `0`, `32`, `64`  | `32`    | Width of `lcp_label` in bits. `0` removes the field from `struct core`.          |
+| `POS`      | `0`, `32`, `64`  | `32`    | Width of `lcp_pos` in bits. `0` removes `start`/`end` from `struct core`.        |
+| `DCT`      | integer          | `1`     | Default DCT iteration count.                                                     |
+| `PREFIX`   | path             | `/usr/local` | Install location.                                                           |
+| `SUFFIX`   | string           | empty   | Appended to the library name, for installing several variants side by side.      |
 
-- `LABEL`: Width of `lcp_label` in bits (0, 32 or 64)
-- `POS`: Width of `lcp_pos` in bits (0, 32 or 64)
-- `DCT`: Default DCT iteration count (integer)
+Two values are **derived** from the above and are not settable directly, because setting them inconsistently would corrupt the output:
+
+- `LCP_SYMBOL_BITS` - 2 for DNA, 8 for protein.
+- `LCP_CONSTANT_FACTOR` - the allocation divisor, 1.5 for `CORE=var` and 1 for `CORE=fixed`. Fixed-length emission produces up to one core per position, so a larger divisor would under-allocate.
 
 ##### Building with Custom Configuration
 
@@ -75,17 +84,30 @@ Pass configuration variables to `make`:
 
 ```sh
 make install LABEL=64 POS=64 DCT=1
+make install ALPHABET=protein
+make install CORE=fixed
 ```
 
-Or use 32-bit types for smaller memory footprint:
+`make install` echoes the variant it built, for example `dna-var-l32-p32-d1`, so you can confirm what an installed library actually is.
+
+`make test` runs the test suite against the installed library under the same configuration; pass the same variables you installed with:
 
 ```sh
-make install LABEL=32 POS=32 DCT=1
+make install ALPHABET=protein PREFIX=$(HOME)/.local
+make test    ALPHABET=protein PREFIX=$(HOME)/.local
 ```
 
-The build system generates `config.h` from `config.h.in` by substituting your values. These values are then used as compile-time conditionals to define concrete types (`uint32_t` or `uint64_t`) in struct definitions like `struct core`.
+##### Installing several variants
 
-**Note:** If `config.h` becomes stale after changing parameters, regenerate it by re-running make with new values. Mismatched binaries and headers will cause undefined behavior.
+Every configuration installs the same `liblcptools` name and the same `config.h`, so installing a second configuration over the first leaves one library paired with the other's header - a silently misread `struct core` rather than a link error. 
+Use `SUFFIX` to keep them apart:
+
+```sh
+make install ALPHABET=protein SUFFIX=-protein   # liblcptools-protein.a
+```
+
+**Note:** the build generates `config.h` from `config.h.in` by substituting your values, and the headers installed alongside the library must be the ones it was built with. 
+If you change parameters, re-run `make install`; mismatched binaries and headers cause undefined behavior.
 
 ## Usage
 
@@ -110,27 +132,79 @@ g++ your_program.cpp -llcptools -o your_program
 If you want to link static library, please use as follows:
 
 ```sh
-g++ your_program.cpp -static -I$(HOME)/.local/include/lcptools -L$(HOME)/.local/lib -llcptools -o your_program
+g++ your_program.cpp -static -I$(HOME)/.local/include -L$(HOME)/.local/lib -llcptools -o your_program
 ```
 
 If you want to link dynamic library, please use as follows:
 
 ```sh
-g++ your_program.cpp -I$(HOME)/.local/include/lcptools -L$(HOME)/.local/lib -llcptools -Wl,-rpath,$(HOME)/.local/lib -o your_program
+g++ your_program.cpp -I$(HOME)/.local/include -L$(HOME)/.local/lib -llcptools -Wl,-rpath,$(HOME)/.local/lib -o your_program
 ```
 
 **Note**: Make sure that paths are correct.
 
 ## Character Encoding
 
-The binary encoding of the alphabet is defined as follows. This default encoding is used unless a custom encoding is provided:
+The symbol table is chosen at build time with `ALPHABET`. This default encoding is used unless a custom encoding is provided.
 
-| Character | Binary Encoding |
-| --------- | --------------- |
-| A, a      | 00              |
-| T, t      | 11              |
-| G, g      | 10              |
-| C, c      | 01              |
+### `ALPHABET=dna` (default)
+
+Four symbols at 2 bits each, plus a reverse-complement table:
+
+| Character | Encoding | Reverse complement |
+| --------- | -------- | ------------------ |
+| A, a      | 00       | 11                 |
+| C, c      | 01       | 10                 |
+| G, g      | 10       | 01                 |
+| T, t      | 11       | 00                 |
+
+### `ALPHABET=protein`
+
+The 20 standard amino acids plus the ambiguity and non-standard codes B (Asx),
+Z (Glx), X (any), U (selenocysteine) and O (pyrrolysine) - 25 symbols at 8 bits
+each, numbered alphabetically over the whole set, upper and lower case alike:
+
+| Character | Encoding | | Character | Encoding | | Character | Encoding |
+| --------- | -------- |-| --------- | -------- |-| --------- | -------- |
+| A         | 0        | | K         | 9        | | T         | 18       |
+| B         | 1        | | L         | 10       | | U         | 19       |
+| C         | 2        | | M         | 11       | | V         | 20       |
+| D         | 3        | | N         | 12       | | W         | 21       |
+| E         | 4        | | O         | 13       | | X         | 22       |
+| F         | 5        | | P         | 14       | | Y         | 23       |
+| G         | 6        | | Q         | 15       | | Z         | 24       |
+| H         | 7        | | R         | 16       | |           |          |
+| I         | 8        | | S         | 17       | |           |          |
+
+`J` and every other character are invalid, exactly as non-ACGT characters are in a DNA build.
+
+**The ordering is part of the algorithm, not a display detail.** LMIN and LMAX are decided by comparing these values, so a different ordering produces a different parse. 
+Alphabetical is the default precisely because it implies nothing; if the parse should follow a biochemical property instead, change `PROTEIN_SYMBOLS` in `encoding.c` or supply a custom encoding file.
+
+Proteins have no reverse complement, so a protein build does not provide `init_lps2`, `init_core2` or `rc_alphabet` at all. 
+Referring to them is a compile error rather than a silently meaningless result.
+
+### Level 1 core layout
+
+A level 1 core packs its three significant symbols and a run length into one 64-bit word, which is why the symbol width matters beyond the encoding table:
+
+| Bits            | Contents                    |
+| --------------- | --------------------------- |
+| 63              | level 1 sentinel            |
+| 62 ... 3*SB     | run length (`distance - 2`) |
+| 3*SB-1 ... 2*SB | first symbol                |
+| 2*SB-1 ... SB   | second-to-last symbol       |
+| SB-1 ... 0      | last symbol                 |
+
+`SB` is `LCP_SYMBOL_BITS`: 2 for DNA, giving a 57-bit length, and 8 for protein, giving 39 bits. 
+Upper-level cores do not use this layout; they hold compressed bit strings.
+
+### Core length
+
+`CORE` selects how a RINT or SSEQ segment becomes cores. LMIN and LMAX cores span exactly three symbols in both modes.
+
+- `CORE=var` (default) - one core spanning the whole segment, so cores vary in length.
+- `CORE=fixed` - every length-3 sliding window of the segment, so every core spans exactly three symbols.
 
 ### Initialization
 
@@ -153,6 +227,23 @@ To display the encoding summary separately, use:
 ```cpp
 LCP_SUMMARY();
 ```
+
+### Custom encodings
+
+`LCP_INIT_FILE(path, verbose)` replaces the built-in table with one read from a file. 
+The column count depends on the alphabet, since only DNA has a complement:
+
+```
+# ALPHABET=dna       <symbol> <encoding> <reverse complement>
+A 0 3
+C 1 2
+
+# ALPHABET=protein   <symbol> <encoding>
+M 0
+K 1
+```
+
+Symbols absent from the file become invalid. An encoding wider than `LCP_SYMBOL_BITS` is rejected, because it would overflow into the neighbouring symbol's field in a level 1 core.
 
 ## Usage Example
 
@@ -224,5 +315,11 @@ This function iteratively compresses and processes cores to find new cores in co
 
 ## Default Variables
 
-The default iteration count for compression in each deepening is set to 1.
-The LCP core label is set to 32 (uint32_t), and LCP core begin and end offsets to 32 (uint32_t).
+A plain `make install` builds `ALPHABET=dna CORE=var LABEL=32 POS=32 DCT=1`: the DNA alphabet, one core per segment, a 32-bit `lcp_label`, 32-bit `lcp_pos` begin and end offsets, and one DCT iteration per deepening. 
+See [Build Configuration](#build-configuration) to change any of them.
+
+## Platform Notes
+
+Linux and macOS are both supported. 
+The build probes `uname -s` and adjusts: macOS produces `liblcptools.dylib` with its absolute install path recorded, so programs linked against it resolve the library after `make install` without setting `DYLD_LIBRARY_PATH`.
+ Linux produces `liblcptools.so` with a soname, and relies on the `-rpath` shown in the [Usage](#usage) examples.
