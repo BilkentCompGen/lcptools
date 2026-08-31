@@ -8,6 +8,34 @@ void log(const std::string &message) {
 	std::cout << message << std::endl;
 }
 
+#if LCP_ALPHABET_PROTEIN
+
+void test_encoding_initialization_default() {
+
+	LCP_INIT();
+
+	// 20 standard amino acids plus B, Z, X, U, O, alphabetical over the set
+	static const char SYMS[] = "ABCDEFGHIKLMNOPQRSTUVWXYZ";
+	for (int i = 0; SYMS[i] != '\0'; i++) {
+		char upper = SYMS[i];
+		char lower = (char)(upper - 'A' + 'a');
+		assert(alphabet[(int)upper] == i && "Residue should carry its alphabetical index");
+		assert(alphabet[(int)lower] == i && "Lower case should encode the same as upper");
+	}
+
+	// J is not an amino acid code and must stay invalid
+	assert(alphabet[(int)'J'] == -1 && "J should be invalid");
+	assert(alphabet[(int)'j'] == -1 && "j should be invalid");
+	assert(alphabet[(int)'*'] == -1 && "* should be invalid");
+
+	// the widest encoding must still fit one symbol field
+	assert(24 < (1 << LCP_SYMBOL_BITS) && "25 residues need to fit in LCP_SYMBOL_BITS");
+
+	log("...  test_encoding_initialization_default passed!");
+}
+
+#else
+
 void test_encoding_initialization_default() {
 
 	LCP_INIT();
@@ -35,7 +63,31 @@ void test_encoding_initialization_default() {
 	log("...  test_encoding_initialization_default passed!");
 }
 
+#endif
+
 void test_encoding_initialization_from_file() {
+
+#if LCP_ALPHABET_PROTEIN
+
+	// protein has no complement, so a custom encoding file is "<symbol> <code>"
+	std::ofstream encoding_file("encoding_test.txt");
+	encoding_file << "M 0\n";
+	encoding_file << "K 1\n";
+	encoding_file << "T 200\n";
+	encoding_file << "A 3\n";
+	encoding_file.close();
+
+	LCP_INIT_FILE("encoding_test.txt", 0);
+
+	assert(alphabet['M'] == 0 && "M should be encoded as 0");
+	assert(alphabet['K'] == 1 && "K should be encoded as 1");
+	assert(alphabet['A'] == 3 && "A should be encoded as 3");
+	// 200 needs 8 bits, the widest a protein build accepts
+	assert(alphabet['T'] == 200 && "T should be encoded as 200");
+	// symbols absent from the file must be invalid, not left over from before
+	assert(alphabet['C'] == -1 && "C should be invalid after loading this file");
+
+#else
 
 	// create a temporary encoding file
 	std::ofstream encoding_file("encoding_test.txt");
@@ -45,7 +97,7 @@ void test_encoding_initialization_from_file() {
 	encoding_file << "T 0 1\n";
 	encoding_file.close();
 
-    LCP_INIT_FILE("encoding_test.txt", 0);
+	LCP_INIT_FILE("encoding_test.txt", 0);
 
 	// check alphabet
 	assert(alphabet['A'] == 2 && "A should be encoded as 5");
@@ -58,6 +110,8 @@ void test_encoding_initialization_from_file() {
 	assert(rc_alphabet['C'] == 3 && "Reverse complement of C should be 3");
 	assert(rc_alphabet['G'] == 0 && "Reverse complement of G should be 0");
 	assert(rc_alphabet['T'] == 1 && "Reverse complement of T should be 1");
+
+#endif
 
 	// clean up the temporary file
 	std::remove("encoding_test.txt");

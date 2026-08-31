@@ -83,6 +83,8 @@ void init_lps(struct lps *lps_ptr, const char *str, int len);
  */
 void init_lps_offset(struct lps *lps_ptr, const char *str, int len, uint64_t offset);
 
+#if !LCP_ALPHABET_PROTEIN
+
 /**
  * @brief Constructs an lps object from a string, with reverse complement
  * transformation.
@@ -92,6 +94,8 @@ void init_lps_offset(struct lps *lps_ptr, const char *str, int len, uint64_t off
  * @param len The length of the string to be parsed.
  */
 void init_lps2(struct lps *lps_ptr, const char *str, int len);
+
+#endif
 /**
  * @brief Initializes an lps object by reading its contents from a binary file.
  *

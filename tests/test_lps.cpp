@@ -10,9 +10,6 @@
 
 #define CORE_COUNT(arr) (static_cast<int>(sizeof(arr) / sizeof((arr)[0])))
 
-// sentinel bit that init_core1/init_core2 prepend to every level 1 core
-#define LCP_LEVEL1_TAG 0x8000000000000000ULL
-
 inline void log(const std::string &message) {
 	std::cout << message << std::endl;
 }
@@ -31,6 +28,25 @@ inline std::string read_first_sequence(const char *path) {
 	}
 	genome.close();
 	return sequence;
+}
+
+// The long sequence the FASTA-based tests run on. A DNA build reads the test
+// genome; a protein build cannot, since a nucleotide file exercises four of the
+// 25 residues and nothing else, so it gets a generated peptide over the full
+// alphabet instead.
+inline std::string test_sequence() {
+#if LCP_ALPHABET_PROTEIN
+	static const char SYMS[] = "ABCDEFGHIKLMNOPQRSTUVWXYZ";
+	std::string peptide;
+	unsigned x = 12345u;
+	for (int i = 0; i < 200000; i++) {
+		x = x * 1103515245u + 12345u;
+		peptide += SYMS[(x >> 16) % 25];
+	}
+	return peptide;
+#else
+	return read_first_sequence("data/test.fasta");
+#endif
 }
 
 // Expected core. core_eq compares bit_rep alone, so the tables below pin every
@@ -75,6 +91,225 @@ static void assert_cores_match(const struct lps *lps_ptr, const expected_core *e
 	}
 }
 
+#if LCP_ALPHABET_PROTEIN
+
+// Golden tables for ALPHABET=protein. Residues are 8 bits, so a level 1 core
+// packs first/middle/last into bits 0..23 and the run length into bits 24..62,
+// below the sentinel at bit 63, and bit_size counts 8 bits per residue.
+//
+// LEVEL 1 is derived from the LCP rules rather than copied from this library.
+// Scanning the peptide gives 25 LMIN, 4 LMAX, 2 RINT and 1 SSEQ segment, three
+// of them longer than three residues; re-running that derivation reproduces all
+// 32 cores below including their intervals, which is what validates the table.
+// The peptide was chosen because it exercises all four segment kinds -- the DNA
+// test string produces no SSEQ at all.
+//
+// LEVELS 2 and 3 are regression snapshots, as with the other alphabets: they
+// fall out of the DCT compression and parse3, which would have to be modelled
+// bit for bit to predict by hand.
+
+// residues 1..77 of E. coli aspartyl-tRNA synthetase
+#define PROTEIN_TEST_STRING "MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQAPILSRVGDGTQDNLSGAEKAVQVKVKALPDAQFEVVHSLAKWKR"
+
+#if LCP_FIXED_CORE
+static const expected_core PROTEIN_LEVEL1_CORES[] = {
+	{24, LCP_LEVEL1_TAG | 0x10b0912,   17500434,   0,   3},
+	{24, LCP_LEVEL1_TAG | 0x1120017,   17956887,   2,   5},
+	{24, LCP_LEVEL1_TAG | 0x1080009,   17301513,   5,   8},
+	{24, LCP_LEVEL1_TAG | 0x10f100f,   17764367,   8,  11},
+	{24, LCP_LEVEL1_TAG | 0x10f0811,   17762321,  10,  13},
+	{24, LCP_LEVEL1_TAG | 0x1110514,   17892628,  12,  15},
+	{24, LCP_LEVEL1_TAG | 0x1140911,   18090257,  14,  17},
+	{24, LCP_LEVEL1_TAG | 0x1070511,   17237265,  17,  20},
+	{24, LCP_LEVEL1_TAG | 0x111100f,   17895439,  19,  22},
+	{24, LCP_LEVEL1_TAG | 0x1100f0a,   17829642,  20,  23},
+	{24, LCP_LEVEL1_TAG | 0x10a0404,   17433604,  22,  25},
+	{24, LCP_LEVEL1_TAG | 0x1040410,   17040400,  23,  26},
+	{24, LCP_LEVEL1_TAG | 0x104100a,   17043466,  24,  27},
+	{24, LCP_LEVEL1_TAG | 0x10a060a,   17434122,  26,  29},
+	{24, LCP_LEVEL1_TAG | 0x1080414,   17302548,  29,  32},
+	{24, LCP_LEVEL1_TAG | 0x10f000e,   17760270,  32,  35},
+	{24, LCP_LEVEL1_TAG | 0x10e080a,   17696778,  34,  37},
+	{24, LCP_LEVEL1_TAG | 0x1111014,   17895444,  37,  40},
+	{24, LCP_LEVEL1_TAG | 0x1060306,   17171206,  40,  43},
+	{24, LCP_LEVEL1_TAG | 0x106120f,   17175055,  42,  45},
+	{24, LCP_LEVEL1_TAG | 0x10f030c,   17761036,  44,  47},
+	{24, LCP_LEVEL1_TAG | 0x10c0a11,   17566225,  46,  49},
+	{24, LCP_LEVEL1_TAG | 0x1060004,   17170436,  49,  52},
+	{24, LCP_LEVEL1_TAG | 0x1090014,   17367060,  52,  55},
+	{24, LCP_LEVEL1_TAG | 0x1140f14,   18091796,  54,  57},
+	{24, LCP_LEVEL1_TAG | 0x1140914,   18090260,  56,  59},
+	{24, LCP_LEVEL1_TAG | 0x109000a,   17367050,  59,  62},
+	{24, LCP_LEVEL1_TAG | 0x10a0e03,   17436163,  61,  64},
+	{24, LCP_LEVEL1_TAG | 0x103000f,   16973839,  63,  66},
+	{24, LCP_LEVEL1_TAG | 0x1050414,   17105940,  66,  69},
+	{24, LCP_LEVEL1_TAG | 0x1041414,   17044500,  67,  70},
+	{24, LCP_LEVEL1_TAG | 0x1141407,   18093063,  68,  71},
+	{24, LCP_LEVEL1_TAG | 0x1140711,   18089745,  69,  72},
+	{24, LCP_LEVEL1_TAG | 0x10a0009,   17432585,  72,  75},
+	{24, LCP_LEVEL1_TAG | 0x1150910,   18155792,  75,  78},
+};
+#else
+static const expected_core PROTEIN_LEVEL1_CORES[] = {
+	{24, LCP_LEVEL1_TAG | 0x10b0912,   17500434,   0,   3},
+	{24, LCP_LEVEL1_TAG | 0x1120017,   17956887,   2,   5},
+	{24, LCP_LEVEL1_TAG | 0x1080009,   17301513,   5,   8},
+	{24, LCP_LEVEL1_TAG | 0x10f100f,   17764367,   8,  11},
+	{24, LCP_LEVEL1_TAG | 0x10f0811,   17762321,  10,  13},
+	{24, LCP_LEVEL1_TAG | 0x1110514,   17892628,  12,  15},
+	{24, LCP_LEVEL1_TAG | 0x1140911,   18090257,  14,  17},
+	{24, LCP_LEVEL1_TAG | 0x1070511,   17237265,  17,  20},
+	{32, LCP_LEVEL1_TAG | 0x2110f0a,   34672394,  19,  23},
+	{32, LCP_LEVEL1_TAG | 0x20a0410,   34210832,  22,  26},
+	{24, LCP_LEVEL1_TAG | 0x104100a,   17043466,  24,  27},
+	{24, LCP_LEVEL1_TAG | 0x10a060a,   17434122,  26,  29},
+	{24, LCP_LEVEL1_TAG | 0x1080414,   17302548,  29,  32},
+	{24, LCP_LEVEL1_TAG | 0x10f000e,   17760270,  32,  35},
+	{24, LCP_LEVEL1_TAG | 0x10e080a,   17696778,  34,  37},
+	{24, LCP_LEVEL1_TAG | 0x1111014,   17895444,  37,  40},
+	{24, LCP_LEVEL1_TAG | 0x1060306,   17171206,  40,  43},
+	{24, LCP_LEVEL1_TAG | 0x106120f,   17175055,  42,  45},
+	{24, LCP_LEVEL1_TAG | 0x10f030c,   17761036,  44,  47},
+	{24, LCP_LEVEL1_TAG | 0x10c0a11,   17566225,  46,  49},
+	{24, LCP_LEVEL1_TAG | 0x1060004,   17170436,  49,  52},
+	{24, LCP_LEVEL1_TAG | 0x1090014,   17367060,  52,  55},
+	{24, LCP_LEVEL1_TAG | 0x1140f14,   18091796,  54,  57},
+	{24, LCP_LEVEL1_TAG | 0x1140914,   18090260,  56,  59},
+	{24, LCP_LEVEL1_TAG | 0x109000a,   17367050,  59,  62},
+	{24, LCP_LEVEL1_TAG | 0x10a0e03,   17436163,  61,  64},
+	{24, LCP_LEVEL1_TAG | 0x103000f,   16973839,  63,  66},
+	{24, LCP_LEVEL1_TAG | 0x1050414,   17105940,  66,  69},
+	{32, LCP_LEVEL1_TAG | 0x2041407,   33821703,  67,  71},
+	{24, LCP_LEVEL1_TAG | 0x1140711,   18089745,  69,  72},
+	{24, LCP_LEVEL1_TAG | 0x10a0009,   17432585,  72,  75},
+	{24, LCP_LEVEL1_TAG | 0x1150910,   18155792,  75,  78},
+};
+#endif
+
+#if LCP_FIXED_CORE
+static const expected_core PROTEIN_LEVEL2_CORES[] = {
+	{ 6,         0x000000000000002e, 3457858291,   2,  13},
+	{ 6,         0x0000000000000021, 2169992986,   8,  17},
+	{ 9,         0x00000000000000d7, 2796433796,  12,  22},
+	{ 6,         0x0000000000000032,   67839844,  17,  25},
+	{10,         0x0000000000000273,   46115713,  22,  29},
+	{ 9,         0x000000000000013b, 2219236039,  24,  35},
+	{ 7,         0x000000000000004b, 3628824713,  32,  43},
+	{ 6,         0x0000000000000011,   63918098,  40,  49},
+	{ 8,         0x0000000000000049, 3912630473,  44,  55},
+	{12,         0x00000000000008cb, 3223361699,  52,  62},
+	{ 7,         0x000000000000006d,   73414458,  56,  66},
+	{10,         0x0000000000000299, 1582691688,  61,  70},
+	{ 9,         0x0000000000000196, 1128430323,  66,  72},
+};
+#else
+static const expected_core PROTEIN_LEVEL2_CORES[] = {
+	{ 6,         0x000000000000002e, 3457858291,   2,  13},
+	{ 6,         0x0000000000000021, 2169992986,   8,  17},
+	{ 9,         0x0000000000000152, 2593600787,  14,  26},
+	{ 9,         0x0000000000000173, 1957220616,  19,  29},
+	{ 9,         0x000000000000013b, 2219236039,  24,  35},
+	{ 7,         0x000000000000004b, 3628824713,  32,  43},
+	{ 6,         0x0000000000000011,   63918098,  40,  49},
+	{ 8,         0x0000000000000049, 3912630473,  44,  55},
+	{12,         0x00000000000008cb, 3223361699,  52,  62},
+	{ 7,         0x000000000000006d,   73414458,  56,  66},
+	{ 7,         0x0000000000000051,  362123574,  61,  71},
+};
+#endif
+
+#if LCP_FIXED_CORE
+static const expected_core PROTEIN_LEVEL3_CORES[] = {
+	{ 6,         0x0000000000000031,  304380204,   8,  29},
+	{ 9,         0x00000000000000f8, 2854964615,  17,  43},
+	{ 9,         0x0000000000000117, 3701813736,  24,  55},
+	{ 7,         0x0000000000000074, 1415562910,  44,  70},
+};
+#else
+static const expected_core PROTEIN_LEVEL3_CORES[] = {
+	{ 6,         0x0000000000000011, 3972495471,   2,  29},
+	{ 9,         0x00000000000000f8, 1323032698,  14,  43},
+	{ 9,         0x0000000000000117, 3701813736,  24,  55},
+	{ 7,         0x0000000000000074,  932510592,  44,  71},
+};
+#endif
+
+void test_lps_constructor() {
+
+	LCP_INIT();
+
+	std::string test_string = PROTEIN_TEST_STRING;
+	struct lps lps_obj;
+	init_lps(&lps_obj, test_string.c_str(), test_string.size());
+
+	assert_cores_match(&lps_obj, PROTEIN_LEVEL1_CORES, CORE_COUNT(PROTEIN_LEVEL1_CORES), "test_lps_constructor");
+
+	free_lps(&lps_obj);
+
+	log("...  test_lps_constructor passed!");
+}
+
+void test_lps_deepen() {
+
+	LCP_INIT();
+
+	std::string test_string = PROTEIN_TEST_STRING;
+	struct lps lps_obj;
+	init_lps(&lps_obj, test_string.c_str(), test_string.size());
+
+	int success = lps_deepen(&lps_obj, 2);
+	assert(success && "Deepening to level 2 should be successful");
+	assert(lps_obj.level == 2 && "Level should be 2 after deepening");
+	assert_cores_match(&lps_obj, PROTEIN_LEVEL2_CORES, CORE_COUNT(PROTEIN_LEVEL2_CORES), "test_lps_deepen (level 2)");
+
+	success = lps_deepen(&lps_obj, 3);
+	assert(success && "Deepening to level 3 should be successful");
+	assert(lps_obj.level == 3 && "Level should be 3 after deepening");
+	assert_cores_match(&lps_obj, PROTEIN_LEVEL3_CORES, CORE_COUNT(PROTEIN_LEVEL3_CORES), "test_lps_deepen (level 3)");
+
+	success = lps_deepen(&lps_obj, 3);
+	assert(success == 0 && "Deepening to a level already reached should be unsuccessful");
+
+	free_lps(&lps_obj);
+
+	log("...  test_lps_deepen passed!");
+}
+
+// Properties of the wider layout that hold by construction, independent of the
+// tables above: 8 bits per residue, sentinel set, packed length agreeing with
+// bit_size, and every symbol field a valid encoding.
+void test_lps_protein_layout() {
+
+	LCP_INIT();
+
+	std::string test_string = PROTEIN_TEST_STRING;
+	struct lps lps_obj;
+	init_lps(&lps_obj, test_string.c_str(), test_string.size());
+
+	assert(lps_obj.size > 0 && "Protein parsing should produce cores");
+
+	for (int i = 0; i < lps_obj.size; i++) {
+		const struct core *cr = &(lps_obj.cores[i]);
+		assert((cr->bit_rep & LCP_LEVEL1_TAG) && "Level 1 core should carry the sentinel bit");
+		assert(cr->bit_size % LCP_SYMBOL_BITS == 0 && "bit_size should be a whole number of residues");
+		unsigned residues = cr->bit_size / LCP_SYMBOL_BITS;
+		assert(residues >= 3 && "A core spans at least three residues");
+		assert(mid_count(cr->bit_rep) + 2 == residues && "Packed length should agree with bit_size");
+		assert(((cr->bit_rep >> (2u * LCP_SYMBOL_BITS)) & LCP_SYMBOL_MASK) < 25 && "first residue in range");
+		assert(((cr->bit_rep >> LCP_SYMBOL_BITS) & LCP_SYMBOL_MASK) < 25 && "middle residue in range");
+		assert((cr->bit_rep & LCP_SYMBOL_MASK) < 25 && "last residue in range");
+#if LCP_POS_BITS != 0
+		assert(cr->end - cr->start == residues && "Interval should match the residue count");
+#endif
+	}
+
+	free_lps(&lps_obj);
+
+	log("...  test_lps_protein_layout passed!");
+}
+
+#else /* !LCP_ALPHABET_PROTEIN */
+
 #if !LCP_FIXED_CORE
 
 // level 1 cores of "GGGACCTGGTGACCCCAGCCCACGACAGCCAAGCGCCAGCTGAGCTCAGGTGTGAGGAGATCACAGTCCT"
@@ -114,25 +349,25 @@ static const expected_core LEVEL1_CORES[] = {
 };
 
 static const expected_core LEVEL2_CORES[] = {
-	{ 6,                   0b00110001, 3555632935,   2,  10},
-	{ 6,                   0b00010001, 3424314286,   5,  13},
-	{ 6,                   0b00010011, 1785772797,   8,  18},
-	{ 8,                   0b10011000,  919618966,  15,  26},
-	{ 8,                   0b10000010,  984734144,  20,  31},
-	{ 7,                   0b01011101,  641965825,  25,  35},
-	{ 7,                   0b01011011, 3374161539,  29,  39},
-	{ 6,                   0b00010001, 4234938273,  36,  46},
-	{ 6,                   0b00010001,   31892384,  41,  51},
-	{ 8,                   0b10010010, 4085211265,  47,  58},
-	{ 6,                   0b00110110, 1654454705,  54,  64},
-	{ 6,                   0b00100001, 3806595524,  58,  68},
+	{ 6,                  0b00110001, 3555632935,   2,  10},
+	{ 6,                  0b00010001, 3424314286,   5,  13},
+	{ 6,                  0b00010011, 1785772797,   8,  18},
+	{ 8,                  0b10011000,  919618966,  15,  26},
+	{ 8,                  0b10000010,  984734144,  20,  31},
+	{ 7,                  0b01011101,  641965825,  25,  35},
+	{ 7,                  0b01011011, 3374161539,  29,  39},
+	{ 6,                  0b00010001, 4234938273,  36,  46},
+	{ 6,                  0b00010001,   31892384,  41,  51},
+	{ 8,                  0b10010010, 4085211265,  47,  58},
+	{ 6,                  0b00110110, 1654454705,  54,  64},
+	{ 6,                  0b00100001, 3806595524,  58,  68},
 };
 
 static const expected_core LEVEL3_CORES[] = {
-	{ 6,                  0b000110011,  223778135,   5,  31},
-	{ 6,                  0b000110111, 1340599299,  15,  39},
-	{ 8,                  0b011101100, 3371074405,  25,  51},
-	{ 9,                  0b110000101,  259839279,  36,  64},
+	{ 6,                 0b000110011,  223778135,   5,  31},
+	{ 6,                 0b000110111, 1340599299,  15,  39},
+	{ 8,                 0b011101100, 3371074405,  25,  51},
+	{ 9,                 0b110000101,  259839279,  36,  64},
 };
 
 void test_lps_constructor() {
@@ -202,7 +437,7 @@ void test_lps_consistency() {
 
 	LCP_INIT();
 
-	std::string sequence = read_first_sequence("data/test.fasta");
+	std::string sequence = test_sequence();
 
 	struct lps lps_obj;
 	init_lps(&lps_obj, sequence.c_str(), sequence.size());
@@ -296,34 +531,34 @@ static const expected_core FIXED_LEVEL1_CORES[] = {
 };
 
 static const expected_core FIXED_LEVEL2_CORES[] = {
-	{ 7,                0b00001100100,  228420930,   3,   9},
-	{ 6,                0b00000010001, 3052224931,   6,  13},
-	{ 9,                0b00011011001, 3108203892,   8,  15},
-	{11,                0b10110011100, 2696927458,  10,  16},
-	{ 8,                0b00011000011, 1485993061,  12,  18},
-	{ 8,                0b00011011001,  788648406,  14,  21},
-	{ 8,                0b00010010001, 1452379690,  17,  23},
-	{ 8,                0b00010000001, 4088632988,  20,  30},
-	{ 7,                0b00000100100,  525311635,  25,  32},
-	{ 8,                0b00010011101, 3887058755,  28,  35},
-	{ 6,                0b00000010011,  405967400,  32,  39},
-	{ 6,                0b00000010001, 4234938273,  36,  46},
-	{ 7,                0b00000100111, 2905066031,  41,  50},
-	{ 9,                0b00111011001, 4122272571,  46,  53},
-	{ 9,                0b00100100111, 3190073306,  48,  57},
-	{ 7,                0b00001111011,  138128131,  53,  59},
-	{ 6,                0b00000110110, 1654454705,  55,  64},
-	{ 6,                0b00000100001, 3806595524,  58,  68},
+	{ 7,               0b00001100100,  228420930,   3,   9},
+	{ 6,               0b00000010001, 3052224931,   6,  13},
+	{ 9,               0b00011011001, 3108203892,   8,  15},
+	{11,               0b10110011100, 2696927458,  10,  16},
+	{ 8,               0b00011000011, 1485993061,  12,  18},
+	{ 8,               0b00011011001,  788648406,  14,  21},
+	{ 8,               0b00010010001, 1452379690,  17,  23},
+	{ 8,               0b00010000001, 4088632988,  20,  30},
+	{ 7,               0b00000100100,  525311635,  25,  32},
+	{ 8,               0b00010011101, 3887058755,  28,  35},
+	{ 6,               0b00000010011,  405967400,  32,  39},
+	{ 6,               0b00000010001, 4234938273,  36,  46},
+	{ 7,               0b00000100111, 2905066031,  41,  50},
+	{ 9,               0b00111011001, 4122272571,  46,  53},
+	{ 9,               0b00100100111, 3190073306,  48,  57},
+	{ 7,               0b00001111011,  138128131,  53,  59},
+	{ 6,               0b00000110110, 1654454705,  55,  64},
+	{ 6,               0b00000100001, 3806595524,  58,  68},
 };
 
 static const expected_core FIXED_LEVEL3_CORES[] = {
-	{ 7,                  0b001110001, 3545232573,   6,  18},
-	{ 7,                  0b000110110,   10338784,  10,  23},
-	{ 9,                  0b101101000, 2596542711,  12,  30},
-	{ 8,                  0b010000001, 2632502658,  17,  35},
-	{ 6,                  0b000111011,  268756671,  28,  50},
-	{ 6,                  0b000111011, 1672441688,  36,  57},
-	{ 7,                  0b001000001, 4063200252,  48,  68},
+	{ 7,                 0b001110001, 3545232573,   6,  18},
+	{ 7,                 0b000110110,   10338784,  10,  23},
+	{ 9,                 0b101101000, 2596542711,  12,  30},
+	{ 8,                 0b010000001, 2632502658,  17,  35},
+	{ 6,                 0b000111011,  268756671,  28,  50},
+	{ 6,                 0b000111011, 1672441688,  36,  57},
+	{ 7,                 0b001000001, 4063200252,  48,  68},
 };
 
 void test_lps_constructor() {
@@ -416,6 +651,8 @@ void test_lps_fixed_cores() {
 
 #endif /* !LCP_FIXED_CORE */
 
+#endif /* LCP_ALPHABET_PROTEIN */
+
 // ---------------------------------------------------------------------------
 // Mode-independent tests: these compare the library against itself rather than
 // against a golden table, so they hold for CORE=var and CORE=fixed alike.
@@ -452,7 +689,7 @@ void test_lps_split_init() {
 
 	LCP_INIT();
 
-	std::string sequence = read_first_sequence("data/test.fasta");
+	std::string sequence = test_sequence();
 
 	struct lps lps_obj1;
 	init_lps(&lps_obj1, sequence.c_str(), sequence.size());
@@ -477,31 +714,40 @@ void test_lps_core_spans() {
 
 	LCP_INIT();
 
-	std::string sequence = read_first_sequence("data/test.fasta");
+	std::string sequence = test_sequence();
 
-	struct lps forward, revcomp;
+	struct lps forward;
 	init_lps(&forward, sequence.c_str(), sequence.size());
+#if !LCP_ALPHABET_PROTEIN
+	struct lps revcomp;
 	init_lps2(&revcomp, sequence.c_str(), sequence.size());
-
 	struct lps *objs[2] = { &forward, &revcomp };
 	const char *names[2] = { "init_lps (parse1)", "init_lps2 (parse2)" };
+	const int count = 2;
+#else
+	struct lps *objs[1] = { &forward };
+	const char *names[1] = { "init_lps (parse1)" };
+	const int count = 1;
+#endif
 
-	for (int k = 0; k < 2; k++) {
+	for (int k = 0; k < count; k++) {
 		assert(objs[k]->size > 0 && "Test sequence should produce cores");
 		for (int i = 0; i < objs[k]->size; i++) {
 			const struct core *cr = &(objs[k]->cores[i]);
-			if (cr->end - cr->start != cr->bit_size / 2) {
+			if (cr->end - cr->start != cr->bit_size / LCP_SYMBOL_BITS) {
 				std::cerr << names[k] << ": core " << i << " spans ["
 				          << cr->start << ", " << cr->end << ") = "
 				          << (cr->end - cr->start) << " positions but encodes "
-				          << (cr->bit_size / 2) << " symbols" << std::endl;
+				          << (cr->bit_size / LCP_SYMBOL_BITS) << " symbols" << std::endl;
 				assert(false && "Core interval should match its symbol count");
 			}
 		}
 	}
 
 	free_lps(&forward);
+#if !LCP_ALPHABET_PROTEIN
 	free_lps(&revcomp);
+#endif
 
 	log("...  test_lps_core_spans passed!");
 }
@@ -514,7 +760,7 @@ void test_lps_label_width() {
 
 	LCP_INIT();
 
-	std::string sequence = read_first_sequence("data/test.fasta");
+	std::string sequence = test_sequence();
 
 	struct lps lps_obj;
 	init_lps(&lps_obj, sequence.c_str(), sequence.size());
@@ -597,9 +843,13 @@ int main() {
 
 	// golden-table tests; both modes have their own tables
 	test_lps_constructor();
+#if !LCP_ALPHABET_PROTEIN
 	test_lps_reverse_complement();
+#endif
 	test_lps_deepen();
-#if LCP_FIXED_CORE
+#if LCP_ALPHABET_PROTEIN
+	test_lps_protein_layout();
+#elif LCP_FIXED_CORE
 	test_lps_fixed_cores();
 #elif LCP_POS_BITS != 0
 	test_lps_consistency();

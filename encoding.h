@@ -30,6 +30,8 @@
 #ifndef ENCODING_H
 #define ENCODING_H
 
+#include "config.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -40,7 +42,9 @@ extern "C" {
 #define maximum(a, b) ((a) > (b) ? (a) : (b))
 
 extern int alphabet[128];
+#if !LCP_ALPHABET_PROTEIN
 extern int rc_alphabet[128];
+#endif
 extern char characters[128];
 
 /**

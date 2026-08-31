@@ -40,6 +40,8 @@ static inline int emit_core1(struct core *cores, int core_index, const char *ori
     return core_index;
 }
 
+#if !LCP_ALPHABET_PROTEIN
+
 /**
  * @brief Emits every length-3 window of a reverse-complement segment.
  *
@@ -69,6 +71,8 @@ static inline int emit_core2(struct core *cores, int core_index, const char *ori
 
     return core_index;
 }
+
+#endif /* !LCP_ALPHABET_PROTEIN */
 
 /**
  * @brief Emits every length-3 window of a segment of cores.

@@ -32,6 +32,8 @@ static inline int emit_core1(struct core *cores, int core_index, const char *ori
     return core_index + 1;
 }
 
+#if !LCP_ALPHABET_PROTEIN
+
 /**
  * @brief Emits one reverse-complement core spanning the whole segment.
  *
@@ -57,6 +59,8 @@ static inline int emit_core2(struct core *cores, int core_index, const char *ori
 
     return core_index + 1;
 }
+
+#endif /* !LCP_ALPHABET_PROTEIN */
 
 /**
  * @brief Emits one core spanning the whole segment of input cores.

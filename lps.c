@@ -112,6 +112,8 @@ int parse1(const char *begin, const char *end, struct core *cores, uint64_t offs
     return core_index;
 }
 
+#if !LCP_ALPHABET_PROTEIN
+
 /**
  * @brief Parses a sequence to extract Locally Consisted Parsing (LCP) cores and stores them in a 
  * array of cores using complement alphabet.
@@ -215,6 +217,8 @@ int parse2(const char *begin, const char *end, struct core *cores, uint64_t offs
 
     return core_index;
 }
+
+#endif /* !LCP_ALPHABET_PROTEIN */
 
 /**
  * @brief Parses a array of cores to extract Locally Consisted Parsing (LCP) cores and stores them in a 
@@ -325,12 +329,16 @@ void init_lps_offset(struct lps *lps_ptr, const char *str, int len, uint64_t off
     lps_ptr->size = parse1(str, str+len, lps_ptr->cores, offset);
 }
 
+#if !LCP_ALPHABET_PROTEIN
+
 void init_lps2(struct lps *lps_ptr, const char *str, int len) {   
     lps_ptr->level = 1;
     lps_ptr->size = 0;
     lps_ptr->cores = (struct core *)malloc((len/LCP_CONSTANT_FACTOR)*sizeof(struct core));
     lps_ptr->size = parse2(str, str+len, lps_ptr->cores, 0);
 }
+
+#endif /* !LCP_ALPHABET_PROTEIN */
 
 void init_lps3(struct lps *lps_ptr, FILE *in) {
     // read the level from the binary file

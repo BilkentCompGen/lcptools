@@ -21,6 +21,12 @@
 /* Default number of DCT iterations used by lcp_dct/lps_deepen. */
 #define LCP_DCT_ITERATION_COUNT @DCT@
 
+/* Alphabet. 0 for DNA (A/C/G/T). 1 for protein (25 residues) and no reverse complement */
+#define LCP_ALPHABET_PROTEIN @ALPHABET_PROTEIN@
+
+/* Bits per symbol in a level 1 core: 2 for DNA, 8 for protein. */
+#define LCP_SYMBOL_BITS @SYMBOL_BITS@
+
 /* Core-length mode. Either 0 or 1. */
 #define LCP_FIXED_CORE @FIXED_CORE@
 

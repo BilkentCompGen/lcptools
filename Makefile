@@ -8,6 +8,7 @@ LABEL ?= 32
 POS ?= 32
 DCT ?= 1
 CORE ?= var
+ALPHABET ?= dna
 
 ifeq ($(filter 0 32 64,$(LABEL)),)
 $(error LABEL must be 0, 32 or 64, got '$(LABEL)')
@@ -19,6 +20,18 @@ endif
 
 ifeq ($(filter var fixed,$(CORE)),)
 $(error CORE must be var or fixed, got '$(CORE)')
+endif
+
+ifeq ($(filter dna protein,$(ALPHABET)),)
+$(error ALPHABET must be dna or protein, got '$(ALPHABET)')
+endif
+
+ifeq ($(ALPHABET),protein)
+ALPHABET_PROTEIN = 1
+SYMBOL_BITS = 8
+else
+ALPHABET_PROTEIN = 0
+SYMBOL_BITS = 2
 endif
 
 ifeq ($(CORE),fixed)
@@ -63,7 +76,7 @@ LIB_NAME = lcptools$(SUFFIX)
 STATIC = lib$(LIB_NAME).a
 DYNAMIC = lib$(LIB_NAME).$(SOEXT)
 
-VARIANT = $(CORE)-l$(LABEL)-p$(POS)-d$(DCT)
+VARIANT = $(ALPHABET)-$(CORE)-l$(LABEL)-p$(POS)-d$(DCT)
 
 PREFIX ?= /usr/local
 ABS_PREFIX := $(realpath $(PREFIX))
@@ -116,12 +129,14 @@ clean:
 	@rm -f $(INCLUDE_DIR)/*
 
 $(CONFIG_HDR): $(CONFIG_IN) Makefile
-	@echo "Generating $@ (LABEL=$(LABEL) POS=$(POS) DCT=$(DCT) CORE=$(CORE))"
+	@echo "Generating $@ (ALPHABET=$(ALPHABET) LABEL=$(LABEL) POS=$(POS) DCT=$(DCT) CORE=$(CORE))"
 	@sed -e 's/@LABEL@/$(LABEL)/' \
 	     -e 's/@POS@/$(POS)/' \
 	     -e 's/@DCT@/$(DCT)/' \
 	     -e 's/@FIXED_CORE@/$(FIXED_CORE)/' \
-	     -e 's/@FACTOR@/$(FACTOR)/' $< > $@
+	     -e 's/@FACTOR@/$(FACTOR)/' \
+	     -e 's/@ALPHABET_PROTEIN@/$(ALPHABET_PROTEIN)/' \
+	     -e 's/@SYMBOL_BITS@/$(SYMBOL_BITS)/' $< > $@
 
 # target for static library
 $(STATIC): $(OBJ_STATIC)

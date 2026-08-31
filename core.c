@@ -54,18 +54,6 @@ static inline lcp_label hash_label(lcp_label w0, lcp_label w1, lcp_label w2, lcp
 #endif
 }
 
-/**
- * @brief Builds a level 1 label from the packed symbol encoding.
- */
-static inline lcp_label seed_label(lcp_label packed) {
-#if LCP_LABEL_BITS == 64
-    uint32_t hi = hash4_label32(LCP_LABEL_SEED_HI, (uint32_t)packed, 0u, 0u, 0u);
-    return ((lcp_label)hi << 32) | (lcp_label)(uint32_t)packed;
-#else
-    return packed;
-#endif
-}
-
 #endif
 
 void init_core1(struct core *cr, const char *begin, lcp_pos distance, lcp_pos start_index, lcp_pos end_index) {
@@ -76,24 +64,18 @@ void init_core1(struct core *cr, const char *begin, lcp_pos distance, lcp_pos st
     (void)start_index;
     (void)end_index;
 #endif
+    cr->bit_rep = LCP_LEVEL1_TAG
+        | ((uint64_t)(distance - 2) << LCP_LENGTH_SHIFT)
+        | ((uint64_t)alphabet[(int)(*begin)] << (2u * LCP_SYMBOL_BITS))
+        | ((uint64_t)alphabet[(int)(*(begin+distance-2))] << LCP_SYMBOL_BITS)
+        | ((uint64_t)alphabet[(int)(*(begin+distance-1))]);
 #if LCP_LABEL_BITS != 0
-    cr->label = 0;
-    cr->label |= ((distance-2) << 6);
-    cr->label |= (alphabet[(int)(*begin)] << 4);
-    cr->label |= (alphabet[(int)(*(begin+distance-2))] << 2);
-    cr->label |= (alphabet[(int)(*(begin+distance-1))]);
-    // bit_rep carries the packed encoding only; the label may be wider
-    cr->bit_rep = 0x8000000000000000 | (uint64_t)cr->label;
-#else
-    lcp_label label = 0;
-    label |= ((distance-2) << 6);
-    label |= (alphabet[(int)(*begin)] << 4);
-    label |= (alphabet[(int)(*(begin+distance-2))] << 2);
-    label |= (alphabet[(int)(*(begin+distance-1))]);
-    cr->bit_rep = 0x8000000000000000 | label;
+    cr->label = (lcp_label)cr->bit_rep;
 #endif
-    cr->bit_size = 2 * distance;
+    cr->bit_size = LCP_SYMBOL_BITS * distance;
 }
+
+#if !LCP_ALPHABET_PROTEIN
 
 void init_core2(struct core *cr, const char *begin, lcp_pos distance, lcp_pos start_index, lcp_pos end_index) {
 #if LCP_POS_BITS != 0
@@ -103,24 +85,19 @@ void init_core2(struct core *cr, const char *begin, lcp_pos distance, lcp_pos st
     (void)start_index;
     (void)end_index;
 #endif
+    cr->bit_rep = LCP_LEVEL1_TAG
+        | ((uint64_t)(distance - 2) << LCP_LENGTH_SHIFT)
+        | ((uint64_t)rc_alphabet[(int)(*(begin))] << (2u * LCP_SYMBOL_BITS))
+        | ((uint64_t)rc_alphabet[(int)(*(begin-distance+2))] << LCP_SYMBOL_BITS)
+        | ((uint64_t)rc_alphabet[(int)(*(begin-distance+1))]);
+
 #if LCP_LABEL_BITS != 0
-    cr->label = 0;
-    cr->label |= ((distance-2) << 6);
-    cr->label |= (rc_alphabet[(int)(*(begin))] << 4);
-    cr->label |= (rc_alphabet[(int)(*(begin-distance+2))] << 2);
-    cr->label |= (rc_alphabet[(int)(*(begin-distance+1))]);
-    // bit_rep carries the packed encoding only; the label may be wider
-    cr->bit_rep = 0x8000000000000000 | (uint64_t)cr->label;
-#else
-    lcp_label label = 0;
-    label |= ((distance-2) << 6);
-    label |= (rc_alphabet[(int)(*(begin))] << 4);
-    label |= (rc_alphabet[(int)(*(begin-distance+2))] << 2);
-    label |= (rc_alphabet[(int)(*(begin-distance+1))]);
-    cr->bit_rep = 0x8000000000000000 | label;
+    cr->label = (lcp_label)cr->bit_rep;
 #endif
-    cr->bit_size = 2 * distance;
+    cr->bit_size = LCP_SYMBOL_BITS * distance;
 }
+
+#endif /* !LCP_ALPHABET_PROTEIN */
 
 void init_core3(struct core *cr, struct core *begin, lcp_pos distance) {
 #if LCP_POS_BITS != 0 
@@ -164,18 +141,24 @@ void init_core4(struct core *cr, ubit_size bit_size, uint64_t bit_rep, lcp_label
 #endif
 }
 
+// prints one symbol, most significant bit first
+static inline void print_symbol(uint64_t sym) {
+    for (unsigned b = LCP_SYMBOL_BITS; b-- > 0; ) {
+        printf("%" PRIu64 "\n", (uint64_t)((sym >> b) & 1ull));
+    }
+}
+
 void print_core(const struct core *cr) {
-    if (cr->bit_rep & 0x8000000000000000) { // if printing 1-level cores
-        uint64_t middle_count = (0x7FFFFFFFFFFFFFFF & cr->bit_rep) >> 6;
-        uint64_t middle_val = (cr->bit_rep >> 2) & 3;
-        printf("%" PRIu64 "\n", ((cr->bit_rep >> 5) & 1));
-        printf("%" PRIu64 "\n", ((cr->bit_rep >> 4) & 1));
-        for (uint64_t i=0; i<middle_count; i++) {
-            printf("%" PRIu64 "\n", ((middle_val >> 1) & 1));
-            printf("%" PRIu64 "\n", (middle_val & 1));           
+    if (cr->bit_rep & LCP_LEVEL1_TAG) { // if printing 1-level cores
+        uint64_t middle_count = mid_count(cr->bit_rep);
+        uint64_t first  = (cr->bit_rep >> (2u * LCP_SYMBOL_BITS)) & LCP_SYMBOL_MASK;
+        uint64_t middle = (cr->bit_rep >> LCP_SYMBOL_BITS) & LCP_SYMBOL_MASK;
+        uint64_t last   = cr->bit_rep & LCP_SYMBOL_MASK;
+        print_symbol(first);
+        for (uint64_t i = 0; i < middle_count; i++) {
+            print_symbol(middle);
         }
-        printf("%" PRIu64 "\n", ((cr->bit_rep >> 1) & 1));
-        printf("%" PRIu64 "\n", (cr->bit_rep & 1));
+        print_symbol(last);
     } else {
         for (ubit_size index = cr->bit_size - 1; 0 < index; index--) {
             printf("%" PRIu64 "\n", ((cr->bit_rep >> index) & 1));

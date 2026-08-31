@@ -47,6 +47,17 @@ extern "C" {
 
 typedef uint32_t ubit_size;
 
+#define LCP_LEVEL1_TAG    0x8000000000000000ull
+#define LCP_LEVEL1_MASK   0x7FFFFFFFFFFFFFFFull
+
+#if !LCP_ALPHABET_PROTEIN
+#define LCP_SYMBOL_MASK   (3ull)    // 0b11
+#define LCP_LENGTH_SHIFT  (6ull)
+#else
+#define LCP_SYMBOL_MASK   (255ull)  // 0b11111111
+#define LCP_LENGTH_SHIFT  (24ull)
+#endif
+
 #if LCP_LABEL_BITS == 64
 typedef uint64_t lcp_label;
 #elif LCP_LABEL_BITS == 32
@@ -93,6 +104,8 @@ struct core {
  */
 void init_core1(struct core *cr, const char *begin, lcp_pos distance, lcp_pos start_index, lcp_pos end_index);
 
+#if !LCP_ALPHABET_PROTEIN
+
 /**
  * @brief Initializes a core structure with the provided string data and index range.
  * 
@@ -106,6 +119,8 @@ void init_core1(struct core *cr, const char *begin, lcp_pos distance, lcp_pos st
  * @param end_index End index of the substring within the data.
  */
 void init_core2(struct core *cr, const char *begin, lcp_pos distance, lcp_pos start_index, lcp_pos end_index);
+
+#endif
 
 /**
  * @brief Initializes a core structure by combining data from other core structures.
@@ -274,20 +289,21 @@ static inline ubit_size bitlen_min2(uint64_t x) {
  * @return The 2-bit symbol at slot k.
  */
 static inline uint64_t sym2(uint64_t rep, unsigned k) {
-    return k ? (rep >> k) & 3ull : rep & 3ull;
+    return k ? (rep >> k) & LCP_SYMBOL_MASK : rep & LCP_SYMBOL_MASK;
 }
 
 /**
- * @brief Extract the middle repetition count stored above the low 6 bits.
+ * @brief Extract the middle repetition count stored above the symbol field.
  *
- * Bits 0–5 are reserved for 2-bit symbols. Bits above 6 contain the
- * repetition count. The most significant bit is masked off before shifting.
+ * The low LCP_LENGTH_SHIFT bits hold the three significant symbols; the count
+ * occupies everything above them up to bit 62. The level 1 sentinel at bit 63
+ * is masked off before shifting.
  *
  * @param rep Packed representation.
  * @return Middle repetition count.
  */
 static inline uint64_t mid_count(uint64_t rep) {
-    return (rep & 0x7FFFFFFFFFFFFFFFull) >> 6;
+    return (rep & LCP_LEVEL1_MASK) >> LCP_LENGTH_SHIFT;
 }
 
 /**
@@ -306,10 +322,8 @@ static inline uint64_t mid_count(uint64_t rep) {
  * @return Encoded value 2 + i plus chosen bit from b2.
  */
 static inline uint64_t emit_idx_bit(uint64_t a2, uint64_t b2, uint64_t i) {
-    if ((a2 & 1) != (b2 & 1)) {
-        return i + (b2 & 1);
-    }
-    return 2 + i + ((b2 >> 1) & 1);
+    unsigned k = (unsigned)__builtin_ctzll(a2 ^ b2);
+    return i + 2ull * (uint64_t)k + ((b2 >> k) & 1ull);
 }
 
 /**
@@ -350,8 +364,8 @@ static inline void core_compress_level1(const struct core *left, struct core *ri
     uint64_t L = left->bit_rep;
     uint64_t R = right->bit_rep;
 
-    uint64_t L3 = sym2(L, 0), L2 = sym2(L, 2), L1 = sym2(L, 4);
-    uint64_t R3 = sym2(R, 0), R2 = sym2(R, 2), R1 = sym2(R, 4);
+    uint64_t L3 = sym2(L, 0), L2 = sym2(L, LCP_SYMBOL_BITS), L1 = sym2(L, 2u * LCP_SYMBOL_BITS);
+    uint64_t R3 = sym2(R, 0), R2 = sym2(R, LCP_SYMBOL_BITS), R1 = sym2(R, 2u * LCP_SYMBOL_BITS);
 
     uint64_t Lm = mid_count(L);
     uint64_t Rm = mid_count(R);
@@ -362,11 +376,11 @@ static inline void core_compress_level1(const struct core *left, struct core *ri
         // base = 0 (2*i with i=0)
         out = emit_idx_bit(L3, R3, 0);
         right->bit_rep = out;
-        right->bit_size = 2;        
+        right->bit_size = bitlen_min2(out);
     }
     else if (L2 != R2) {
         // Your original used base=4/6 -> i=2 (since 2*i = 4)
-        out = emit_idx_bit(L2, R2, 4);
+        out = emit_idx_bit(L2, R2, 2u * LCP_SYMBOL_BITS);
         right->bit_rep = out;
         right->bit_size = bitlen_min2(out);
     }
@@ -374,17 +388,17 @@ static inline void core_compress_level1(const struct core *left, struct core *ri
         // Preserve your “compare across boundary depending on which count is smaller”
         if (Lm < Rm) {
             // compare left L1 with right R2; index = Lm + 1
-            out = emit_idx_bit(L1, R2, 4 * Lm + 4);
+            out = emit_idx_bit(L1, R2, 2u * LCP_SYMBOL_BITS * (Lm + 1));
         } else {
             // compare left L2 with right R1; index = Rm + 1
-            out = emit_idx_bit(L2, R1, 4 * Rm + 4);
+            out = emit_idx_bit(L2, R1, 2u * LCP_SYMBOL_BITS * (Rm + 1));
         }
         right->bit_rep = out;
         right->bit_size = bitlen_min2(out);
     }
     else if (L1 != R1) {
         // left mismatch: index = Lm + 1
-        out = emit_idx_bit(L1, R1, 4 * Lm + 4);
+        out = emit_idx_bit(L1, R1, 2u * LCP_SYMBOL_BITS * (Lm + 1));
         right->bit_rep = out;
         right->bit_size = bitlen_min2(out);
     }

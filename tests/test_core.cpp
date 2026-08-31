@@ -26,6 +26,8 @@ void test_core_constructors() {
 	log("...  test_core_constructors passed!");
 }
 
+#if !LCP_ALPHABET_PROTEIN
+
 void test_core_compress() {
 
 	struct core core1;
@@ -68,6 +70,8 @@ void test_core_compress() {
 	log("...  test_core_compress passed!");
 }
 
+#endif /* !LCP_ALPHABET_PROTEIN */
+
 void test_core_operator_overloads() {
 
 	struct core core1;
@@ -91,7 +95,9 @@ int main() {
 	log("Running test_core...");
 
 	test_core_constructors();
+#if !LCP_ALPHABET_PROTEIN
 	test_core_compress();
+#endif
 	test_core_operator_overloads();
 
 	log("All tests in test_core completed successfully!");
