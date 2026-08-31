@@ -52,13 +52,11 @@ extern "C" {
 
 #include "core.h"
 #include "encoding.h"
+#include "config.h"
 #include <pthread.h>
 #include <stdio.h>
 #include <math.h>
 
-#ifndef CONSTANT_FACTOR
-#define CONSTANT_FACTOR     1.5
-#endif
 
 struct lps {
     int level;

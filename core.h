@@ -44,9 +44,6 @@ extern "C" {
 #include <inttypes.h>
 #include <string.h>
 
-#define DCT_ITERATION_COUNT 1
-
-#define minimum(a, b) ((a) < (b) ? (a) : (b))
 
 typedef uint32_t ubit_size;
 
@@ -402,7 +399,6 @@ static inline void core_compress_level1(const struct core *left, struct core *ri
     right->start = left->start;
 #endif
 }
-
 
 /**
  * @brief Perform upper-level compression via bounded first-difference encoding.

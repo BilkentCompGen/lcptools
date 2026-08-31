@@ -5,7 +5,7 @@
  * Do not include this template directly and do not edit the generated header;
  * change the values by re-running the build, e.g.
  *
- *     make install LABEL=64 POS=64 DCT=1
+ *     make install LABEL=64 POS=64 DCT=1 CORE=fixed
  *
  */
 
@@ -20,5 +20,11 @@
 
 /* Default number of DCT iterations used by lcp_dct/lps_deepen. */
 #define LCP_DCT_ITERATION_COUNT @DCT@
+
+/* Core-length mode. Either 0 or 1. */
+#define LCP_FIXED_CORE @FIXED_CORE@
+
+/* Allocation divisor for the initial core array. */
+#define LCP_CONSTANT_FACTOR @FACTOR@
 
 #endif
