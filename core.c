@@ -77,14 +77,13 @@ void init_core1(struct core *cr, const char *begin, lcp_pos distance, lcp_pos st
     (void)end_index;
 #endif
 #if LCP_LABEL_BITS != 0
-    lcp_label packed = 0;
-    packed |= ((distance-2) << 6);
-    packed |= (alphabet[(int)(*begin)] << 4);
-    packed |= (alphabet[(int)(*(begin+distance-2))] << 2);
-    packed |= (alphabet[(int)(*(begin+distance-1))]);
+    cr->label = 0;
+    cr->label |= ((distance-2) << 6);
+    cr->label |= (alphabet[(int)(*begin)] << 4);
+    cr->label |= (alphabet[(int)(*(begin+distance-2))] << 2);
+    cr->label |= (alphabet[(int)(*(begin+distance-1))]);
     // bit_rep carries the packed encoding only; the label may be wider
-    cr->bit_rep = 0x8000000000000000 | (uint64_t)packed;
-    cr->label = seed_label(packed);
+    cr->bit_rep = 0x8000000000000000 | (uint64_t)cr->label;
 #else
     lcp_label label = 0;
     label |= ((distance-2) << 6);
@@ -105,14 +104,13 @@ void init_core2(struct core *cr, const char *begin, lcp_pos distance, lcp_pos st
     (void)end_index;
 #endif
 #if LCP_LABEL_BITS != 0
-    lcp_label packed = 0;
-    packed |= ((distance-2) << 6);
-    packed |= (rc_alphabet[(int)(*(begin))] << 4);
-    packed |= (rc_alphabet[(int)(*(begin-distance+2))] << 2);
-    packed |= (rc_alphabet[(int)(*(begin-distance+1))]);
+    cr->label = 0;
+    cr->label |= ((distance-2) << 6);
+    cr->label |= (rc_alphabet[(int)(*(begin))] << 4);
+    cr->label |= (rc_alphabet[(int)(*(begin-distance+2))] << 2);
+    cr->label |= (rc_alphabet[(int)(*(begin-distance+1))]);
     // bit_rep carries the packed encoding only; the label may be wider
-    cr->bit_rep = 0x8000000000000000 | (uint64_t)packed;
-    cr->label = seed_label(packed);
+    cr->bit_rep = 0x8000000000000000 | (uint64_t)cr->label;
 #else
     lcp_label label = 0;
     label |= ((distance-2) << 6);
